@@ -1,9 +1,0 @@
-INDEX VERSION 1.131
-/Users/zaidtariq/ Warehouse/Learning Center/TU KL/Semester 4/Proj/Workspace/.metadata/.plugins/org.eclipse.jst.jsp.core/jspsearch/2720280437.index
-/WebSearchEngine/src
-/Users/zaidtariq/ Warehouse/Learning Center/TU KL/Semester 4/Proj/Workspace/.metadata/.plugins/org.eclipse.jst.jsp.core/jspsearch/1819835672.index
-/WebSearchEngine/src
-/Users/zaidtariq/ Warehouse/Learning Center/TU KL/Semester 4/Proj/Workspace/.metadata/.plugins/org.eclipse.jst.jsp.core/jspsearch/2278039107.index
-/WebSearchEngine/src
-/Users/zaidtariq/ Warehouse/Learning Center/TU KL/Semester 4/Proj/Repo/Workspace/.metadata/.plugins/org.eclipse.jst.jsp.core/jspsearch/2720280437.index
-/WebSearchEngine/src

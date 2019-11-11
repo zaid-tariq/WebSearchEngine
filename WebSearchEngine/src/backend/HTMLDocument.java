@@ -1,20 +1,20 @@
 package backend;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 
 public class HTMLDocument {
 
-    private URL url;
-    private LinkedHashSet<URL> links = new LinkedHashSet<>();
+    private URI url;
+    private LinkedHashSet<URI> links = new LinkedHashSet<>();
     private HashMap<String, Integer> termFrequencies = new HashMap<>();
 
-    public HTMLDocument(URL url) {
+    public HTMLDocument(URI url) {
         this.url = url;
     }
 
-    public void addLink(URL url) {
+    public void addLink(URI url) {
         links.add(url);
     }
 
@@ -26,11 +26,11 @@ public class HTMLDocument {
         termFrequencies.putIfAbsent(term, 1);
     }
 
-    public URL getUrl() {
+    public URI getUrl() {
         return url;
     }
 
-    public LinkedHashSet<URL> getLinks() {
+    public LinkedHashSet<URI> getLinks() {
         return links;
     }
 

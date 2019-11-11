@@ -1,0 +1,14 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="./css/style.css">
+<title>Main View</title>
+
+</head>
+<body>
+<div>
+${message}
+ 
+	
+	</div>
+</body>
+</html>

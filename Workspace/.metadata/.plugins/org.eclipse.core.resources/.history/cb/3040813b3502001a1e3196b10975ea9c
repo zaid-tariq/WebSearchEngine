@@ -1,0 +1,13 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="./css/style.css">
+<title>Spring MVC Tutorial by Crunchify - Hello World Spring MVC
+	Example</title>
+
+</head>
+<body>${message}
+ 
+	
+	</div>
+</body>
+</html>

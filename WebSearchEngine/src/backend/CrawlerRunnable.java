@@ -1,6 +1,8 @@
 package backend;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 public class CrawlerRunnable implements Runnable {
 
@@ -12,6 +14,10 @@ public class CrawlerRunnable implements Runnable {
 
 	@Override
 	public void run() {
-		Indexer.parse(urlToCrawl);
+		try {
+			Indexer.index(urlToCrawl);
+		} catch (IOException | URISyntaxException e) {
+			e.printStackTrace();
+		}
 	}
 }

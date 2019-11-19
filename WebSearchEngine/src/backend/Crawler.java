@@ -40,7 +40,7 @@ public class Crawler extends Thread {
 
 		// Get database connection
 		try {
-			con = DriverManager.getConnection("jdbc:postgresql:websearch","postgres","postgres");
+			con = DriverManager.getConnection("jdbc:postgresql:project", "app", "pass");
 			stmtNextURL = con.prepareStatement("SELECT * FROM crawlerQueue ORDER BY id FETCH FIRST ROW ONLY");
 			// Insert starting URLs to the database queue table
 			queueURLs(urls, con);
@@ -56,7 +56,7 @@ public class Crawler extends Thread {
 			while (crawl) {
 				if (maximumNumberOfDocs != crawledDocuments) {
 					Object[] entry = getNextURL(leaveDomain);
-					if (maximumDepth != (int) entry[1]) {
+					if (entry != null && maximumDepth != (int) entry[1]) {
 						if (leaveDomain) {
 							exs.submit(new CrawlerRunnable((URI) entry[0]));
 							crawledDocuments++;
@@ -99,17 +99,24 @@ public class Crawler extends Thread {
 	private Object[] getNextURL(boolean leaveDomain) throws SQLException, URISyntaxException {
 		stmtNextURL.execute();
 		ResultSet res = stmtNextURL.getResultSet();
-		res.next();
+		if (res.next()) {
+			System.out.println("yes");
+			PreparedStatement stmnt = this.con.prepareStatement("DELETE FROM crawlerQueue WHERE id = ?");
+			stmnt.setInt(1, res.getInt(1));
+			stmnt.execute();
+			stmnt.close();
+			return new Object[] { new URI(res.getString(2)), res.getInt(3) };
+		}
+		return null;
 
-		return new Object[] { new URI(res.getString(0)), res.getInt(1) };
 	}
 
 	private void queueURLs(Set<URI> urls, Connection con) throws SQLException, MalformedURLException {
 		PreparedStatement stmtQueueURLs = con
 				.prepareStatement("INSERT INTO crawlerQueue(url, current_depth) VALUES (?,?)");
 		for (URI uri : urls) {
-			stmtQueueURLs.setString(0, uri.toURL().toString());
-			stmtQueueURLs.setInt(1, 0);
+			stmtQueueURLs.setString(1, uri.toURL().toString());
+			stmtQueueURLs.setInt(2, 0);
 			stmtQueueURLs.addBatch();
 		}
 

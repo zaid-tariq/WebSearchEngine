@@ -13,6 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.regex.Matcher;
+
 import java.util.regex.Pattern;
 
 public class HTMLParser {
@@ -20,7 +21,7 @@ public class HTMLParser {
 	public List<String> stopwords;
 
 	public HTMLParser() throws IOException {
-		stopwords = getStopwordsFromFile(new File("TODO: Filepath"));
+		stopwords = getStopwordsFromFile(new File("/Users/zaidtariq/ Warehouse/Learning Center/TU KL/Semester 4/IS Project/Repo/group-01/WebSearchEngine/src/backend/stopwords.txt"));
 	}
 
 	/**

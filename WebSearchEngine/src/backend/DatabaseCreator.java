@@ -78,7 +78,7 @@ public class DatabaseCreator {
 
 	private void createCrawlerQueueTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
-				"CREATE TABLE IF NOT EXISTS crawlerQueue (id SERIAL PRIMARY KEY, url TEXT NOT NULL, current_depth INT NOT NULL");
+				"CREATE TABLE IF NOT EXISTS crawlerQueue (id SERIAL PRIMARY KEY, url TEXT NOT NULL, current_depth INT NOT NULL)");
 		statement.execute();
 		statement.close();
 	}

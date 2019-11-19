@@ -22,12 +22,16 @@ public class CrawlerRunnable implements Runnable {
 
 	@Override
 	public void run() {
+		System.out.println("thread running");
+		Connection con = null;
 		try {
 
 			// TODO:create database connection
-			Connection con = DriverManager.getConnection("jdbc:postgresql:websearch","postgres","postgres");
+			con = DriverManager.getConnection("jdbc:postgresql:project","app","pass");
+			System.out.println("conn acquired");
 
 			HTMLDocument doc = Indexer.index(urlToCrawl);
+			System.out.println("please print + "+doc.getUrl());
 
 			con.setAutoCommit(false);
 
@@ -35,36 +39,46 @@ public class CrawlerRunnable implements Runnable {
 			insertURLToVisited(doc.getUrl(), con);
 
 			con.commit();
-			con.close();
+			
 
 		} catch (IOException | URISyntaxException | SQLException e) {
 			e.printStackTrace();
 		}
+		finally {
+			try {
+				con.close();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 
 	private void insertDocDataToDatabase(HTMLDocument doc, Connection con) throws SQLException, MalformedURLException {
+		
 		PreparedStatement stmtInsertDoc = con.prepareStatement(
-				"INSERT INTO documents (url,crawled_on_date, language) VALUES (?,CURRENT_DATE,?)",
+				"INSERT INTO documents (docid, url,crawled_on_date, language) VALUES (5, ?,CURRENT_DATE,?)",
 				Statement.RETURN_GENERATED_KEYS);
-		stmtInsertDoc.setString(0, doc.getUrl().toURL().toString());
+		stmtInsertDoc.setString(1, doc.getUrl().toString());
 		stmtInsertDoc.setString(2, doc.getLanguage());
 		stmtInsertDoc.executeUpdate();
 
 		ResultSet key = stmtInsertDoc.getGeneratedKeys();
-		key.next();
-		int docId = key.getInt(0);
+		if(key.next()) {
+		int docId = key.getInt(1);
 		stmtInsertDoc.close();
-
+		
 		PreparedStatement stmtInsertFeature = con
 				.prepareStatement("INSERT INTO features (docid, term, term_frequency) VALUES (?,?,?)");
 		for (Entry<String, Integer> e : doc.getTermFrequencies().entrySet()) {
-			stmtInsertFeature.setInt(0, docId);
-			stmtInsertFeature.setString(1, e.getKey());
-			stmtInsertFeature.setInt(2, e.getValue());
+			stmtInsertFeature.setInt(1, docId);
+			stmtInsertFeature.setString(2, e.getKey());
+			stmtInsertFeature.setInt(3, e.getValue());
 			stmtInsertFeature.addBatch();
 		}
 		stmtInsertFeature.executeBatch();
 		stmtInsertFeature.close();
+	}
 
 		// TODO: insert links
 		// PreparedStatement stmtInsertLinks = con.prepareStatement("INSERT INTO
@@ -74,7 +88,7 @@ public class CrawlerRunnable implements Runnable {
 	private void insertURLToVisited(URI url, Connection con) throws SQLException, MalformedURLException {
 		PreparedStatement stmt = con
 				.prepareStatement("INSERT INTO crawlerVisitedPages (url, last_visited) VALUES (?, CURRENT_DATE)");
-		stmt.setString(0, url.toURL().toString());
+		stmt.setString(1, url.toString());
 		stmt.execute();
 		stmt.close();
 	}

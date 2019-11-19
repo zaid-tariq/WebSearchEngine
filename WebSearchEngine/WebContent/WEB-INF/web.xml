@@ -25,5 +25,4 @@
         <url-pattern>/crawler.jsp</url-pattern>
         <url-pattern>*.html</url-pattern>
     </servlet-mapping>
-  
 </web-app>

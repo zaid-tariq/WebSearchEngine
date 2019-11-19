@@ -41,6 +41,8 @@ public class HTMLParser {
 		while ((line = br.readLine()) != null) {
 			content += line;
 		}
+		
+		//TODO: parse file for meta data
 
 		// 2. parse the file for links
 		Matcher mLinks = Pattern.compile("href=\"(.*?)\"").matcher(content);

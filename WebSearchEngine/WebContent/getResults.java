@@ -1,7 +1,6 @@
-package connector;
-
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -9,10 +8,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.org.controller.Result;
+
 /**
  * Servlet implementation class getResults
  */
-@WebServlet("/getResults")
+@WebServlet("/results")
 public class getResults extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
@@ -40,6 +41,7 @@ public class getResults extends HttpServlet {
 
 		// TODO: format response to the JSON format --> build JSON object then write it
 		// to the response
-		PrintWriter wr = response.getWriter();
+		request.setAttribute("result", "This is then the result");
+		request.getRequestDispatcher(search.jsp).forward(request, response);
 	}
 }

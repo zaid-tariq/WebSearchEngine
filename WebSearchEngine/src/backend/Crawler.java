@@ -40,11 +40,11 @@ public class Crawler extends Thread {
 
 		// Get database connection
 		try {
-			con = DriverManager.getConnection("");
-			stmtNextURL = con.prepareStatement(""); // TODO: create statement
-
-			// TODO: Insert starting URLs to the database queue table
-		} catch (SQLException e) {
+			con = DriverManager.getConnection("jdbc:postgresql:websearch","postgres","postgres");
+			stmtNextURL = con.prepareStatement("SELECT * FROM crawlerQueue ORDER BY id FETCH FIRST ROW ONLY");
+			// Insert starting URLs to the database queue table
+			queueURLs(urls, con);
+		} catch (SQLException | MalformedURLException e) {
 			e.printStackTrace();
 		}
 	}
@@ -55,10 +55,23 @@ public class Crawler extends Thread {
 			int crawledDocuments = 0;
 			while (crawl) {
 				if (maximumNumberOfDocs != crawledDocuments) {
-					URI urlToCrawl = getNextURL(leaveDomain);
-					if (maximumDepth != currentMaxDepth) {
-						exs.submit(new CrawlerRunnable(urlToCrawl));
-						maximumNumberOfDocs++;
+					Object[] entry = getNextURL(leaveDomain);
+					if (maximumDepth != (int) entry[1]) {
+						if (leaveDomain) {
+							exs.submit(new CrawlerRunnable((URI) entry[0]));
+							crawledDocuments++;
+						} else {
+							boolean contains = false;
+							for (URI u : urls) {
+								if (u.getHost().equals(((URI) entry[0]).getHost())) {
+									contains = true;
+								}
+							}
+							if (contains) {
+								exs.submit(new CrawlerRunnable((URI) entry[0]));
+								crawledDocuments++;
+							}
+						}
 					}
 				}
 			}
@@ -79,17 +92,27 @@ public class Crawler extends Thread {
 		try {
 			con.prepareStatement("INSERT INTO ...");
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
-	private URI getNextURL(boolean leaveDomain) throws SQLException, URISyntaxException {
-		// TODO: set Parameters stmtNextURL.setString(parameterIndex, x);
+	private Object[] getNextURL(boolean leaveDomain) throws SQLException, URISyntaxException {
 		stmtNextURL.execute();
 		ResultSet res = stmtNextURL.getResultSet();
 		res.next();
 
-		return new URI(res.getString(0));
+		return new Object[] { new URI(res.getString(0)), res.getInt(1) };
+	}
+
+	private void queueURLs(Set<URI> urls, Connection con) throws SQLException, MalformedURLException {
+		PreparedStatement stmtQueueURLs = con
+				.prepareStatement("INSERT INTO crawlerQueue(url, current_depth) VALUES (?,?)");
+		for (URI uri : urls) {
+			stmtQueueURLs.setString(0, uri.toURL().toString());
+			stmtQueueURLs.setInt(1, 0);
+			stmtQueueURLs.addBatch();
+		}
+
+		stmtQueueURLs.executeBatch();
 	}
 }

@@ -1,7 +1,5 @@
-/.metadata/
-/Servers/
-.DS_Store
-.project
-.launch
-.classpath
-
+/*
+!.gitignore
+!/WebSearchEngine/WebContent/
+!/WebSearchEngine/src/
+!/WebSearchEngine/pom.xml

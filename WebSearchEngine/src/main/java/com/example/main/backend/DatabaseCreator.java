@@ -44,7 +44,8 @@ public class DatabaseCreator {
 			createLinksTable(connection);
 			createProcedureToTfIdfUpdate(connection);
 			createFunctionConjunctive_search(connection);
-			createFunctionDisjunctive_search(connection);			
+			createFunctionDisjunctive_search(connection);	
+			createStatsFunction(connection);
 
 			createCrawlerStateTable(connection);
 			createCrawlerQueueTable(connection);
@@ -141,31 +142,31 @@ public class DatabaseCreator {
 	private void createFunctionConjunctive_search(Connection con) throws SQLException {
 		String query = 
 				"		DROP FUNCTION  IF EXISTS conjunctive_search(text,integer); "
-				+ "		CREATE OR REPLACE FUNCTION public.conjunctive_search(IN search_terms text,IN top_k integer)"
-				+ "    	RETURNS TABLE(doc_id integer, tf_idf_score double precision)" 
+				+ "		CREATE OR REPLACE FUNCTION public.conjunctive_search("
+				+ "				IN search_terms text[],"
+				+ "				IN top_k integer"
+				+ "			)"
+				+ "    	RETURNS TABLE(doc_url text, tf_idf_score double precision)" 
 				+ "    	LANGUAGE 'plpgsql'"
-				+ "		AS $BODY$ BEGIN" +
-				"		CREATE TEMP TABLE search_terms_table(term text);		" + 
-				"		INSERT INTO search_terms_table SELECT unnest(search_terms); " + 
-				"		CREATE TEMP TABLE required_terms_table(term text);		" + 
-				"		INSERT INTO required_terms_table SELECT unnest(required_terms); " 
+				+ "		AS $BODY$ BEGIN" 
+				+ "		CREATE TEMP TABLE search_terms_table(term text);		" 
+				+ "		INSERT INTO search_terms_table SELECT unnest(search_terms); " 
 				+ "		RETURN QUERY" 
 				+ "				WITH " 
-				+ "					doc_content AS("
-				+ "						SELECT DISTINCT f1.docid, ARRAY("
-				+ "														SELECT term FROM features f2"
-				+ "														WHERE f2.docid = f1.docid"
-				+ "													) as content"
-				+ "						FROM features f1 ORDER BY docid" 
+				+ "					filtered_docs AS("
+				+ "						SELECT f1.docid"
+				+ "						FROM features f1"
+				+ "						GROUP BY f1.docid"
+				+ "						HAVING NOT EXISTS(" + 
+						"						SELECt * FROM search_terms_table " + 
+						"						EXCEPT SELECT unnest(array_agg(f1.term))" + 
+						"				)" 
 				+ "					)"
-				+ "				SELECT f.docid, SUM(tf_idf) as tf_idf" 
-				+ "				from features f, doc_content dc"
-				+ "				WHERE " 
-				+ "						f.docid=dc.docid"
-				+ "						AND NOT EXISTS("
-				+ "							SELECt * FROM search_terms_table EXCEPT"
-				+ "							SELECT unnest(dc.content) )" 
-				+ "				GROUP BY f.docid"
+				+ "				SELECT d.url, CAST( SUM(tf_idf) AS FLOAT(3)) as tf_idf" 
+				+ "				from features f, filtered_docs fd, documents d"
+				+ "				WHERE 	f.docid = fd.docid "
+				+ "						AND f.docid = d.docid" 
+				+ "				GROUP BY d.url"
 				+ "				ORDER BY tf_idf" 
 				+ "				LIMIT top_k;" 
 				+ "END; $BODY$;";
@@ -178,12 +179,12 @@ public class DatabaseCreator {
 		String query = 
 				"	DROP FUNCTION  IF EXISTS disjunctive_search(text,integer); "
 				+ "	CREATE OR REPLACE FUNCTION disjunctive_search(" + 
-				"    	search_terms character varying[], " + 
-				"		required_terms character varying[]," + 
-				"		top_k integer," + 
-				"		site text" + 
+				"    	search_terms text[], " + 
+				"		required_terms text[]," + 
+				"		top_k integer" + 
+				//"		site text" + 
 				"		)" + 
-				"	RETURNS TABLE(doc_id integer, tf_idf_score real)" + 
+				"	RETURNS TABLE(doc_url text, tf_idf_score real)" + 
 				"	LANGUAGE plpgsql" + 
 				"	AS $$" + 
 				
@@ -195,22 +196,45 @@ public class DatabaseCreator {
 				"RETURN QUERY" + 
 				"		WITH " + 
 				"			filtered_docs_keywords AS(						" + 
-				"				SELECT f1.docid, array_agg(term) as all_terms" + 
+				"				SELECT f1.docid" + 
 				"				FROM features f1" + 
 				"				GROUP BY f1.docid " + 
 				"				HAVING NOT EXISTS(" + 
 				"					SELECt * FROM required_terms_table " + 
-				"					EXCEPT SELECT unnest(all_terms)" + 
+				"					EXCEPT SELECT unnest(array_agg(term))" + 
 				"				)" + 
 				"			)" + 
 				"			" + 
-				"		SELECT f.docid, SUM(f.tf_idf) as tf_idf				" + 
-				"		from features f, filtered_docs fd, search_terms_table st		" + 
+				"		SELECT d.url, CAST(SUM(f.tf_idf) AS FLOAT(2)) as tf_idf				" + 
+				"		from features f, filtered_docs fd, search_terms_table st, documents d		" + 
 				"		WHERE	f.docid=fd.docid						" + 
-				"				AND f.term = st.term" + 
-				"		GROUP BY f.docid				" + 
+				"				AND f.term = st.term "
+				+ "				AND f.docid = d.docid" + 
+				"		GROUP BY 				" + 
 				"		ORDER BY tf_idf				" + 
 				"		LIMIT top_k;" + 
+				"	END;  $$;";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	private void createStatsFunction(Connection con) throws SQLException {
+		String query = 
+				"CREATE OR REPLACE FUNCTION get_term_frequencies(" + 
+				"    search_terms text[]" + 
+				")" + 
+				"RETURNS TABLE(doc_id integer, tf_idf_score real)" + 
+				"LANGUAGE plpgsql" + 
+				"AS $$ " + 
+				"BEGIN " + 
+				"CREATE TEMP TABLE search_terms_table(term text);		" + 
+				"INSERT INTO search_terms_table SELECT unnest(search_terms); " + 
+				"RETURN QUERY			" + 
+				"		SELECT st.term, COUNT(DISTINCT f.docid) as df			" + 
+				"		from features f, search_terms_table st		" + 
+				"		WHERE f.term = st.term" + 
+				"		GROUP BY st.term;" + 
 				"	END;  $$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);

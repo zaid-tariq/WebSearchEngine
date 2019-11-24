@@ -71,7 +71,8 @@ public class DBHandler {
 		return a_response;
 	}
 	
-	public void getStats(Connection a_conn, String query, int a_k) throws SQLException {
+	
+	public SearchResultResponse getStats(Connection a_conn, String query, SearchResultResponse a_response) throws SQLException {
 		
 		List<String> terms = new ArrayList<String>();
 		for(String subQuery : getTermsInQuotes("\"" + query + "\"")) {
@@ -88,15 +89,21 @@ public class DBHandler {
 		
 		String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
 		
-		PreparedStatement sql = a_conn.prepareStatement("SELECT * from (?,?,?)");
-		//TODO: write SQL function to return stats
+		PreparedStatement sql = a_conn.prepareStatement("SELECT * from get_term_frequencies(?)");
 		sql.setArray(1, a_conn.createArrayOf("text", termsArr));
 		sql.execute();
 		ResultSet results = sql.getResultSet();
+		
+		if(a_response == null)
+			a_response = new SearchResultResponse();
+		
 		while (results.next()) {
-			System.out.println(results.getString(1) + "," + results.getInt(2));
-
+			String term = results.getString(1);
+			int df = results.getInt(2);
+			a_response.addStat(df, term);
 		}
+		
+		return a_response;
 	}
 	
 	

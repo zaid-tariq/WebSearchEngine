@@ -36,6 +36,7 @@ public class SearchAPIController {
 			res = handler.searchConjunctiveQuery(con, query, limit, res);
 			int cw = handler.getCollectionSize(con);
 			res.setCollectionSize(cw);
+			res = handler.getStats(con, query, res);
 		}
 		catch( SQLException ex) {
 			ex.printStackTrace();
@@ -52,8 +53,6 @@ public class SearchAPIController {
 				}
 			}
 		}
-		
-		
 		
 		return res;
 	}
@@ -73,6 +72,7 @@ public class SearchAPIController {
 			res = handler.searchDisjunctiveQuery(con, query, limit, res);
 			int cw = handler.getCollectionSize(con);
 			res.setCollectionSize(cw);
+			res = handler.getStats(con, query, res);
 		}
 		catch( SQLException ex) {
 			ex.printStackTrace();

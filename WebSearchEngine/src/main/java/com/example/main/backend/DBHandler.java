@@ -1,0 +1,112 @@
+package com.example.main.backend;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class DBHandler {
+
+	public void computeTfIdf(Connection a_conn) throws SQLException {
+		PreparedStatement query = a_conn.prepareStatement("CALL update_tf_idf_scores()");
+		query.execute();
+	}
+
+	public void searchConjunctiveQuery(Connection a_conn, String query, int a_k) throws SQLException {
+		
+		List<String> searchTerms = getTermsInQuotes(query);
+		String[] searchTermsArr = getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
+		PreparedStatement sql = a_conn.prepareStatement("SELECT * from conjunctive_search(?, ?)");
+		sql.setArray(1,  a_conn.createArrayOf("text", searchTermsArr));
+		sql.setInt(2, a_k);
+		sql.execute();
+		ResultSet results = sql.getResultSet();
+		while (results.next()) {
+			System.out.println(results.getString(1) + "," + results.getFloat(2));
+			//TODO: Return formatted results
+		}
+	}
+
+	public void searchDisjunctiveQuery(Connection a_conn, String query, int a_k) throws SQLException {
+		
+		List<String> searchTerms = new ArrayList<String>();
+		for(String subQuery : getTermsInQuotes("\"" + query + "\"")) {
+			for(String term : subQuery.split(" ")) {
+				term = term.trim();
+				if(term.length() > 0) {
+					searchTerms.add(term);
+					System.out.println(term);
+				}
+			}
+		}
+		
+		String[] searchTermsArr = (String[]) searchTerms.toArray(new String[searchTerms.size()]);
+		List<String> requiredTerms = getTermsInQuotes(query);
+		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
+		
+		PreparedStatement sql = a_conn.prepareStatement("SELECT * from disjunctive_search(?,?,?)");
+		sql.setArray(1, a_conn.createArrayOf("text", searchTermsArr));
+		sql.setArray(2, a_conn.createArrayOf("text", requiredTermsArr));
+		sql.setInt(3, a_k);
+		sql.execute();
+		ResultSet results = sql.getResultSet();
+		while (results.next()) {
+			System.out.println(results.getString(1) + "," + results.getFloat(2));
+			//TODO: Return formatted results
+		}
+	}
+	
+	public void getStats(Connection a_conn, String query, int a_k) throws SQLException {
+		
+		List<String> terms = new ArrayList<String>();
+		for(String subQuery : getTermsInQuotes("\"" + query + "\"")) {
+			for(String term : subQuery.split(" ")) {
+				term = term.trim();
+				if(term.length() > 0) {
+					terms.add(term);
+					System.out.println(term);
+				}
+			}
+		}
+		
+		terms.addAll(getTermsInQuotes(query));
+		
+		String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
+		
+		PreparedStatement sql = a_conn.prepareStatement("SELECT * from (?,?,?)");
+		//TODO: write SQL function to return stats
+		sql.setArray(1, a_conn.createArrayOf("text", termsArr));
+		sql.execute();
+		ResultSet results = sql.getResultSet();
+		while (results.next()) {
+			System.out.println(results.getString(1) + "," + results.getInt(2));
+
+		}
+	}
+	
+	
+	public int getCollectionSize(Connection a_conn) throws SQLException {
+		PreparedStatement sql = a_conn.prepareStatement("SELECT COUNT(docid) from documents");
+		sql.execute();
+		ResultSet results = sql.getResultSet();
+		results.next();
+		return results.getInt(1);
+	}
+
+	
+	private List<String> getTermsInQuotes(String query) {
+		
+		List<String> terms = new ArrayList<String>();
+		Pattern pattern = Pattern.compile("\"([^\"]*)\"");
+		Matcher matcher = pattern.matcher(query);
+		while(matcher.find()){
+			String term = matcher.group(1);
+			terms.add(term);
+			System.out.println(term);
+		}
+		
+		return terms;	
+	}
+	
+}

@@ -28,47 +28,12 @@ public class SearchAPIController {
 		
 		System.out.println("Processing "+query);
 		Connection con = null;
+		SearchResultResponse res = new SearchResultResponse(query, limit);
 		
 		try {
 			con = new DatabaseCreator().getConnection();
 			DBHandler handler = new DBHandler();
-			handler.searchConjunctiveQuery(con, query, limit);		
-		}
-		catch( SQLException ex) {
-			ex.printStackTrace();
-		}
-		catch(Exception ex) {
-			ex.printStackTrace();
-		}
-		finally {
-			if(con != null) {
-				try {
-					con.close();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		
-		SearchResultResponse res = new SearchResultResponse(query, limit);
-		
-		return res;
-	}
-	
-	@GetMapping("/disjunctive")
-	@ResponseBody
-	public SearchResultResponse searchAPIdisjunctive(@RequestParam(value = "query") String query,
-			@RequestParam(value = "limit", defaultValue = "50") int limit) {
-		
-		System.out.println("Processing "+limit);
-		SearchResultResponse res = new SearchResultResponse(query, limit);
-		Connection con = null;
-		
-		try {
-			
-			con = new DatabaseCreator().getConnection();
-			DBHandler handler = new DBHandler();
-			handler.searchDisjunctiveQuery(con, query, limit);
+			res = handler.searchConjunctiveQuery(con, query, limit, res);
 			int cw = handler.getCollectionSize(con);
 			res.setCollectionSize(cw);
 		}
@@ -90,6 +55,40 @@ public class SearchAPIController {
 		
 		
 		
+		return res;
+	}
+	
+	@GetMapping("/disjunctive")
+	@ResponseBody
+	public SearchResultResponse searchAPIdisjunctive(@RequestParam(value = "query") String query,
+			@RequestParam(value = "limit", defaultValue = "50") int limit) {
+		
+		System.out.println("Processing "+limit);
+		SearchResultResponse res = new SearchResultResponse(query, limit);
+		Connection con = null;
+		
+		try {
+			con = new DatabaseCreator().getConnection();
+			DBHandler handler = new DBHandler();
+			res = handler.searchDisjunctiveQuery(con, query, limit, res);
+			int cw = handler.getCollectionSize(con);
+			res.setCollectionSize(cw);
+		}
+		catch( SQLException ex) {
+			ex.printStackTrace();
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
+		finally {
+			if(con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 		
 		return res;
 	}

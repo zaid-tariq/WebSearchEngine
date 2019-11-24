@@ -41,6 +41,9 @@ public class SearchResultResponse {
 	public Query query;
 	public int cw;
 	
+	public SearchResultResponse() {
+	}
+	
 	public SearchResultResponse(String a_searchQuery, int a_limit) {
 		this.query = new Query(a_limit, a_searchQuery);
 	}

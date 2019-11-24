@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.example.main.backend.api.responseObjects.SearchResultResponse;
+
 public class DBHandler {
 
 	public void computeTfIdf(Connection a_conn) throws SQLException {
@@ -13,7 +15,7 @@ public class DBHandler {
 		query.execute();
 	}
 
-	public void searchConjunctiveQuery(Connection a_conn, String query, int a_k) throws SQLException {
+	public SearchResultResponse searchConjunctiveQuery(Connection a_conn, String query, int a_k, SearchResultResponse a_response) throws SQLException {
 		
 		List<String> searchTerms = getTermsInQuotes(query);
 		String[] searchTermsArr = getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
@@ -22,13 +24,19 @@ public class DBHandler {
 		sql.setInt(2, a_k);
 		sql.execute();
 		ResultSet results = sql.getResultSet();
+		if(a_response == null)
+			a_response = new SearchResultResponse();
+		int rank = 1;
 		while (results.next()) {
-			System.out.println(results.getString(1) + "," + results.getFloat(2));
-			//TODO: Return formatted results
+			String url = results.getString(1);
+			float score = results.getFloat(2);
+			a_response.addSearchResultItem(rank++, url, score);
+			//TODO: implement indexes
 		}
+		return a_response;
 	}
 
-	public void searchDisjunctiveQuery(Connection a_conn, String query, int a_k) throws SQLException {
+	public SearchResultResponse searchDisjunctiveQuery(Connection a_conn, String query, int a_k, SearchResultResponse a_response) throws SQLException {
 		
 		List<String> searchTerms = new ArrayList<String>();
 		for(String subQuery : getTermsInQuotes("\"" + query + "\"")) {
@@ -51,10 +59,16 @@ public class DBHandler {
 		sql.setInt(3, a_k);
 		sql.execute();
 		ResultSet results = sql.getResultSet();
+		if(a_response == null)
+			a_response = new SearchResultResponse();
+		int rank = 1;
 		while (results.next()) {
-			System.out.println(results.getString(1) + "," + results.getFloat(2));
-			//TODO: Return formatted results
+			String url = results.getString(1);
+			float score = results.getFloat(2);
+			a_response.addSearchResultItem(rank++, url, score);
+			//TODO: implement indexes
 		}
+		return a_response;
 	}
 	
 	public void getStats(Connection a_conn, String query, int a_k) throws SQLException {

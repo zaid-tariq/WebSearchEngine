@@ -141,12 +141,11 @@ public class DatabaseCreator {
 
 	private void createFunctionConjunctive_search(Connection con) throws SQLException {
 		String query = 
-				"		DROP FUNCTION  IF EXISTS conjunctive_search(text,integer); "
-				+ "		CREATE OR REPLACE FUNCTION public.conjunctive_search("
+				"		CREATE OR REPLACE FUNCTION conjunctive_search("
 				+ "				IN search_terms text[],"
 				+ "				IN top_k integer"
 				+ "			)"
-				+ "    	RETURNS TABLE(doc_url text, tf_idf_score double precision)" 
+				+ "    	RETURNS TABLE(doc_url text, tf_idf_score real)" 
 				+ "    	LANGUAGE 'plpgsql'"
 				+ "		AS $BODY$ BEGIN" 
 				+ "		CREATE TEMP TABLE search_terms_table(term text);		" 
@@ -177,8 +176,7 @@ public class DatabaseCreator {
 
 	private void createFunctionDisjunctive_search(Connection con) throws SQLException {
 		String query = 
-				"	DROP FUNCTION  IF EXISTS disjunctive_search(text,integer); "
-				+ "	CREATE OR REPLACE FUNCTION disjunctive_search(" + 
+				"	CREATE OR REPLACE FUNCTION disjunctive_search(" + 
 				"    	search_terms text[], " + 
 				"		required_terms text[]," + 
 				"		top_k integer" + 
@@ -224,10 +222,11 @@ public class DatabaseCreator {
 				"CREATE OR REPLACE FUNCTION get_term_frequencies(" + 
 				"    search_terms text[]" + 
 				")" + 
-				"RETURNS TABLE(doc_id integer, tf_idf_score real)" + 
+				"RETURNS TABLE(term text, df bigint) " + 
 				"LANGUAGE plpgsql" + 
 				"AS $$ " + 
 				"BEGIN " + 
+				"DROP TABLE IF EXISTS search_terms_table; " +
 				"CREATE TEMP TABLE search_terms_table(term text);		" + 
 				"INSERT INTO search_terms_table SELECT unnest(search_terms); " + 
 				"RETURN QUERY			" + 

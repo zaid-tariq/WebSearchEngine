@@ -16,10 +16,4 @@ public class WebSearchEngineApplication extends SpringBootServletInitializer imp
 		System.out.println("#### main ####");
 		SpringApplication.run(WebSearchEngineApplication.class, args);
 	}
-	
-	 @Override
-	  public void addInterceptors(InterceptorRegistry registry) {
-		 System.out.println("#### addInterceptors ####");
-		 registry.addInterceptor(new PerClientRateLimitInterceptor()).addPathPatterns("*");
-	 }
 }

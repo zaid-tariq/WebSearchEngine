@@ -1,33 +1,34 @@
 package com.example.main;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.Set;
-
-import com.example.main.backend.Crawler;
+import com.example.main.backend.DBHandler;
 import com.example.main.backend.DatabaseCreator;
+import com.example.main.backend.api.responseObjects.SearchResultResponse;
 
 
 public class CLI {
 	
-	public static void main(String[] args) throws SQLException, URISyntaxException {
+	public static void main(String[] args) throws SQLException, URISyntaxException, IOException, InterruptedException {
+	
+		//@jdbc url, @user, @pass, @query, @k, @typeOfSearch
 		
-		DatabaseCreator db = new DatabaseCreator();
+		DatabaseCreator db = new DatabaseCreator(args[0], args[1], args[2]);
+		db.create();
 		java.sql.Connection connection = db.getConnection();
 		
 		try {
-			//db.create();
-//			DBHandler handler = new DBHandler();
-//			//handler.computeTfIdf(connection);
-//			handler.searchConjunctiveQuery(connection, "title2 title3 title4", 5);
-//			handler.searchDisjunctiveQuery(connection, "title2 title3 title4", 5);
-//			
-			Set<URL> urls = new HashSet<URL>();
-			urls.add(new URL("https://lerner.co.il/category/postgresql/"));
-			Crawler crawl = new Crawler(urls, 2, -1, true, 5);
-			crawl.start();
+			db.create();
+			DBHandler handler = new DBHandler();
+			SearchResultResponse res = null;
+			if(args[5] == "conjunctive")
+				res = handler.searchConjunctiveQuery(connection, args[3], Integer.parseInt(args[4]), null);
+			else if(args[5] == "disjunctive")
+				res = handler.searchDisjunctiveQuery(connection, args[3], Integer.parseInt(args[4]), null);
+			else
+				throw new Exception("Choose either conjunctive or disjunctive query method");
+			res.printResult();
 
 		} catch (Exception e) {
 			e.printStackTrace();

@@ -31,7 +31,6 @@ public class DBHandler {
 			String url = results.getString(1);
 			float score = results.getFloat(2);
 			a_response.addSearchResultItem(rank++, url, score);
-			//TODO: implement indexes
 		}
 		return a_response;
 	}
@@ -66,7 +65,6 @@ public class DBHandler {
 			String url = results.getString(1);
 			float score = results.getFloat(2);
 			a_response.addSearchResultItem(rank++, url, score);
-			//TODO: implement indexes
 		}
 		return a_response;
 	}

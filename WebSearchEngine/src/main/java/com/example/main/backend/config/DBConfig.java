@@ -1,19 +1,41 @@
 package com.example.main.backend.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Properties;
+
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DBConfig {
 	
-	@Value("${spring.datasource.url}")
 	private String url;
 	
-	@Value("${spring.datasource.username}")
 	private String username;
 	
-	@Value("${spring.datasource.password}")
 	private String password;
+	
+	public DBConfig() {
+		
+		Properties props = new Properties();
+		try {
+			props.load( new FileInputStream(new ClassPathResource("application.properties").getFile()));
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		this.url = props.getProperty("spring.datasource.url");
+		this.username = props.getProperty("spring.datasource.username");
+		this.password = props.getProperty("spring.datasource.password");
+		System.out.println(this.url);
+		System.out.println(this.username);
+		System.out.println(this.password);
+	}
 
 	public String getUrl() {
 		return url;

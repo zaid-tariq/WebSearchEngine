@@ -1,5 +1,7 @@
 package com.example.main.backend.api.responseObjects;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -126,6 +128,38 @@ public class SearchResultResponse {
 
 	public void setCw(int cw) {
 		this.cw = cw;
+	}
+	
+	public void filterResultsWithSite(URL site) {
+		
+		if(site == null)
+			return;
+		List<SearchResultItem> filteredList = new ArrayList<SearchResultItem>();
+		
+		for(SearchResultItem resItem : this.resultList) {
+			
+			try {
+				URL url = new URL(resItem.url.trim());
+				if(url.getHost().equals(site.getHost())) {
+					filteredList.add(resItem);
+				}
+				
+			} catch (MalformedURLException e) {
+				
+				System.out.println("Url skipped because of site filter!");
+			}
+		}
+		
+		this.resultList = filteredList;
+	}
+	
+	
+	public void printResult() {
+		
+		for(SearchResultItem resItem : this.resultList) {
+			System.out.println(resItem.rank +" , "+resItem.url+", "+resItem.score);
+		}
+		
 	}
 
 

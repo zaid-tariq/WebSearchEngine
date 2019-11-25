@@ -7,12 +7,13 @@
 	</head>
 	<body>
 		<div style='text-align: center;'>
+			<p>${results}</p>
 			<table class="table">
 		       <c:forEach items="${results}" var="result">
 		            <tr>
 		                <td>${result.rank}</td>
-		                <td>${result.url}/></td>
-		                <td>${result.score}/></td>  
+		                <td>${result.url}</td>
+		                <td>${result.score}</td>  
 		            </tr>
 		        </c:forEach>
 		    </table>		 

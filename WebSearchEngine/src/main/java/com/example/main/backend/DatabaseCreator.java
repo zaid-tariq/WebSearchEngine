@@ -1,7 +1,6 @@
 package com.example.main.backend;
 
 import java.sql.*;
-import java.util.Properties;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
@@ -12,8 +11,21 @@ import com.example.main.backend.config.DBConfig;
 public class DatabaseCreator {
 
 	private Connection connection;
+	String url;
+	String user;
+	String pass;
 
 	public DatabaseCreator() {
+		DBConfig conf = new DBConfig();
+		this.url = conf.getUrl();
+		this.user = conf.getUsername();
+		this.pass = conf.getPassword();
+	}
+
+	public DatabaseCreator(String url, String user, String pass) {
+		this.url = url;
+		this.user = user;
+		this.pass = pass;
 	}
 
 	public Connection getConnection() throws SQLException {
@@ -21,9 +33,8 @@ public class DatabaseCreator {
 		if(this.connection != null) {
 			return this.connection;
 		}
-		DBConfig conf = new DBConfig();
-		System.out.println(conf.getUrl());
-		this.connection = DriverManager.getConnection(conf.getUrl(), conf.getUsername(),conf.getPassword());
+
+		this.connection = DriverManager.getConnection(url, user, pass);
 		return connection;
 	}
 
@@ -39,6 +50,7 @@ public class DatabaseCreator {
 			createFunctionConjunctive_search(connection);
 			createFunctionDisjunctive_search(connection);	
 			createStatsFunction(connection);
+			createIndices(connection);
 
 			createCrawlerStateTable(connection);
 			createCrawlerQueueTable(connection);
@@ -96,6 +108,16 @@ public class DatabaseCreator {
 		PreparedStatement statement = con.prepareStatement(
 				"CREATE TABLE IF NOT EXISTS crawlerState (id INT PRIMARY KEY, maximum_depth INT NOT NULL, maximum_docs INT NOT NULL, crawled_docs INT NOT NULL, leave_domain BOOLEAN, parallelism INT NOT NULL)");
 		statement.execute();
+		statement.close();
+	}
+	
+	private void createIndices(Connection con) throws SQLException {
+	
+		String query = 
+				"CREATE INDEX IF NOT EXISTS docid_index ON features (docid);" + 
+				"CREATE INDEX IF NOT EXISTS term_index ON features (term);" ;
+		Statement statement = con.createStatement();
+		statement.execute(query);
 		statement.close();
 	}
 
@@ -176,7 +198,7 @@ public class DatabaseCreator {
 				//"		site text" + 
 				"		)" + 
 				"	RETURNS TABLE(doc_url text, tf_idf_score real)" + 
-				"	LANGUAGE plpgsql" + 
+				"	LANGUAGE 'plpgsql'" + 
 				"	AS $$" + 
 				
 				"BEGIN			" + 
@@ -186,7 +208,7 @@ public class DatabaseCreator {
 				"INSERT INTO required_terms_table SELECT unnest(required_terms); " + 
 				"RETURN QUERY" + 
 				"		WITH " + 
-				"			filtered_docs_keywords AS(						" + 
+				"			filtered_docs AS(						" + 
 				"				SELECT f1.docid" + 
 				"				FROM features f1" + 
 				"				GROUP BY f1.docid " + 
@@ -201,7 +223,7 @@ public class DatabaseCreator {
 				"		WHERE	f.docid=fd.docid						" + 
 				"				AND f.term = st.term "
 				+ "				AND f.docid = d.docid" + 
-				"		GROUP BY 				" + 
+				"		GROUP BY d.url				" + 
 				"		ORDER BY tf_idf				" + 
 				"		LIMIT top_k;" + 
 				"	END;  $$;";
@@ -216,7 +238,7 @@ public class DatabaseCreator {
 				"    search_terms text[]" + 
 				")" + 
 				"RETURNS TABLE(term text, df bigint) " + 
-				"LANGUAGE plpgsql" + 
+				"LANGUAGE 'plpgsql' " + 
 				"AS $$ " + 
 				"BEGIN " + 
 				"DROP TABLE IF EXISTS search_terms_table; " +

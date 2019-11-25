@@ -14,8 +14,6 @@ import com.example.main.backend.api.responseObjects.SearchResultResponse;
 @RestController
 @RequestMapping("/rest/search")
 public class SearchAPIController {
-
-	//TODO: Implement site filter in search query. No requirement to do this in SQL in exercise, can do it in java too
 	
 	@GetMapping("/conjunctive")
 	@ResponseBody
@@ -34,7 +32,9 @@ public class SearchAPIController {
 			@RequestParam(value = "limit", defaultValue = "50") int limit) {
 		
 		System.out.println("Processing "+query);
-		return ResponseEntity.ok().body(new SearchAPI().searchAPIdisjunctive(query, limit));
+		
+		SearchResultResponse res = new SearchAPI().searchAPIdisjunctive(query, limit);
+		return ResponseEntity.ok().body(res);
 	}
 	
 	

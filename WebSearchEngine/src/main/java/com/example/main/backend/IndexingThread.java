@@ -10,9 +10,9 @@ public class IndexingThread extends Thread {
 	 *
 	 * @param seconds time to sleep till the next computation of tf idf scores
 	 */
-	public IndexingThread(int seconds) {
+	public IndexingThread(int milliseconds) {
 		this.setDaemon(true);
-		this.sleepSeconds = seconds;
+		this.sleepSeconds = milliseconds;
 	}
 
 	@Override

@@ -3,6 +3,7 @@ package com.example.main;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import com.example.main.backend.DatabaseCreator;
+import com.example.main.backend.IndexingThread;
 
 public class CLIIndexing {
 
@@ -12,7 +13,7 @@ public class CLIIndexing {
 		java.sql.Connection connection = db.getConnection();
 
 		try {
-
+			new IndexingThread(Integer.parseInt(args[0])).start();
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {

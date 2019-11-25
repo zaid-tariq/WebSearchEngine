@@ -17,7 +17,8 @@
             <div class="card-body text-center">
             	<div class="row mb-4">
             		<img class="col-6 offset-3" src="images/TUgle.png" alt="TUgle">
-            	</div>                <form action="results" method="get">
+            	</div>                
+            	<form action="results" method="get">
                     <div class="form-group">
                         <input class="form-control" type="text" name="query">
                     </div>

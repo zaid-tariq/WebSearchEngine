@@ -47,9 +47,10 @@ public class Crawler extends Thread {
 					"SELECT id, maximum_depth, maximum_docs, crawled_docs, leave_domain, parallelism FROM crawlerState WHERE id = ?");
 			ps.execute();
 			ResultSet res = ps.getResultSet();
-			if(res.next()) {
-				//Only if there is a valid configuration stored in the database
-				crawler = new Crawler(new HashSet<URL>(),res.getInt(2), res.getInt(3), res.getBoolean(5), res.getInt(6));
+			if (res.next()) {
+				// Only if there is a valid configuration stored in the database
+				crawler = new Crawler(new HashSet<URL>(), res.getInt(2), res.getInt(3), res.getBoolean(5),
+						res.getInt(6));
 				crawler.crawledDocuments = res.getInt(4);
 			}
 			ps.close();
@@ -81,7 +82,7 @@ public class Crawler extends Thread {
 		// Get database connection
 		try {
 			DBConfig conf = new DBConfig();
-			con = DriverManager.getConnection(conf.getUrl(), conf.getUsername(), conf.getPassword());
+			con = DriverManager.getConnection("jdbc:postgresql://localhost:5432/project", "postgres", "postgres");
 			stmtNextURL = con.prepareStatement("SELECT * FROM crawlerQueue ORDER BY id FETCH FIRST ROW ONLY");
 			// Insert starting URLs to the database queue table
 			queueURLs(urls, con);
@@ -206,8 +207,8 @@ public class Crawler extends Thread {
 
 		stmtQueueURLs.executeBatch();
 
-		PreparedStatement stmt = con.prepareStatement(
-				"INSERT INTO documents (url,crawled_on_date, language) VALUES (?,NULL,NULL)");
+		PreparedStatement stmt = con
+				.prepareStatement("INSERT INTO documents (docid, url,crawled_on_date, language) VALUES (DEFAULT,?,NULL,NULL)");
 
 		for (URL url : urls) {
 			stmt.setString(1, url.toString());

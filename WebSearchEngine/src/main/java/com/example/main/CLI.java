@@ -29,7 +29,6 @@ public class CLI {
 			else
 				throw new Exception("Choose either conjunctive or disjunctive query method");
 			res.printResult();
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {

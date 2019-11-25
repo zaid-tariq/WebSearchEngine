@@ -172,7 +172,7 @@ public class Crawler extends Thread {
 		stmtQueueURLs.executeBatch();
 
 		PreparedStatement stmt = con.prepareStatement(
-				"INSERT INTO documents (docid,url,crawled_on_date, language) VALUES (DEFAULT,?,NULL,NULL)");
+				"INSERT INTO documents (url,crawled_on_date, language) VALUES (?,NULL,NULL)");
 
 		for (URL url : urls) {
 			stmt.setString(1, url.toString());

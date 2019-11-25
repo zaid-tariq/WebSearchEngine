@@ -16,6 +16,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.example.main.backend.config.DBConfig;
+
 public class Crawler extends Thread {
 
 	private Queue<URL> urls = new LinkedList<>();
@@ -39,7 +41,8 @@ public class Crawler extends Thread {
 		Crawler crawler = null;
 		Connection loadCon = null;
 		try {
-			loadCon = DriverManager.getConnection("jdbc:postgresql:project", "postgres", "postgres");
+			DBConfig conf = new DBConfig();
+			loadCon = DriverManager.getConnection(conf.getUrl(), conf.getUsername(), conf.getPassword());
 			PreparedStatement ps = loadCon.prepareStatement(
 					"SELECT id, maximum_depth, maximum_docs, crawled_docs, leave_domain, parallelism FROM crawlerState WHERE id = ?");
 			ps.execute();
@@ -77,7 +80,8 @@ public class Crawler extends Thread {
 
 		// Get database connection
 		try {
-			con = DriverManager.getConnection("jdbc:postgresql:project", "postgres", "postgres");
+			DBConfig conf = new DBConfig();
+			con = DriverManager.getConnection(conf.getUrl(), conf.getUsername(), conf.getPassword());
 			stmtNextURL = con.prepareStatement("SELECT * FROM crawlerQueue ORDER BY id FETCH FIRST ROW ONLY");
 			// Insert starting URLs to the database queue table
 			queueURLs(urls, con);

@@ -12,6 +12,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
+
+import com.example.main.backend.config.DBConfig;
+
 import java.util.Set;
 
 public class CrawlerRunnable implements Runnable {
@@ -29,8 +32,8 @@ public class CrawlerRunnable implements Runnable {
 	public void run() {
 		Connection con = null;
 		try {
-
-			con = DriverManager.getConnection("jdbc:postgresql:project", "postgres", "postgres");
+			DBConfig conf = new DBConfig();
+			con = DriverManager.getConnection(conf.getUrl(), conf.getUsername(), conf.getPassword());
 
 			HTMLDocument doc = Indexer.index(urlToCrawl);
 

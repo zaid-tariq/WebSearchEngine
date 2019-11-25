@@ -5,6 +5,8 @@ import java.util.Properties;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
+import com.example.main.backend.config.DBConfig;
+
 @Component
 @PropertySource(value = { "classpath:application.properties" }, ignoreResourceNotFound = false)
 public class DatabaseCreator {
@@ -19,12 +21,9 @@ public class DatabaseCreator {
 		if(this.connection != null) {
 			return this.connection;
 		}
-
-		String url = "jdbc:postgresql://localhost:5432/project";
-		Properties props = new Properties();
-		props.setProperty("user", "app");
-		props.setProperty("password", "pass");
-		this.connection = DriverManager.getConnection(url, props);
+		DBConfig conf = new DBConfig();
+		System.out.println(conf.getUrl());
+		this.connection = DriverManager.getConnection(conf.getUrl(), conf.getUsername(),conf.getPassword());
 		return connection;
 	}
 

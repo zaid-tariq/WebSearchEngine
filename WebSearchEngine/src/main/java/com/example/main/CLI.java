@@ -24,11 +24,13 @@ public class CLI {
 //			handler.searchConjunctiveQuery(connection, "title2 title3 title4", 5);
 //			handler.searchDisjunctiveQuery(connection, "title2 title3 title4", 5);
 //			
+			DatabaseCreator c = new DatabaseCreator();
+			c.create();
+			
 			Set<URL> urls = new HashSet<URL>();
 			urls.add(new URL("https://lerner.co.il/category/postgresql/"));
 			Crawler crawl = new Crawler(urls, 2, -1, true, 5);
 			crawl.start();
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {

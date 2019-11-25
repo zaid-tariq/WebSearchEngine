@@ -6,4 +6,11 @@ Servers/
 .classpath
 .settings/
 log/
+<<<<<<< HEAD
 target/
+=======
+target/
+.mvn/
+*.cmd
+mvnw
+>>>>>>> develop

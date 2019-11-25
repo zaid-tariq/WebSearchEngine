@@ -1,0 +1,2 @@
+https://stackoverflow.com/questions/46032748/spring-boot-value-returns-always-null/46032810
+https://stackoverflow.com/questions/30528255/how-to-access-a-value-defined-in-the-application-properties-file-in-spring-boot

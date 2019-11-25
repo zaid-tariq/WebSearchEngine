@@ -9,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
@@ -18,8 +19,8 @@ import java.util.concurrent.Executors;
 public class Crawler extends Thread {
 
 	private Queue<URL> urls = new LinkedList<>();
-	
-	//If this parameter is set to -1 the crawler will go for infinite depth
+
+	// If this parameter is set to -1 the crawler will go for infinite depth
 	private int maximumDepth;
 
 	// If this parameter is set to -1 the crawler will process data infinite long
@@ -32,6 +33,36 @@ public class Crawler extends Thread {
 	private Connection con;
 	private PreparedStatement stmtNextURL;
 	private ExecutorService exs;
+
+	public static Crawler restore(int id) {
+		// Get database connection
+		Crawler crawler = null;
+		Connection loadCon = null;
+		try {
+			loadCon = DriverManager.getConnection("jdbc:postgresql:project", "postgres", "postgres");
+			PreparedStatement ps = loadCon.prepareStatement(
+					"SELECT id, maximum_depth, maximum_docs, crawled_docs, leave_domain, parallelism FROM crawlerState WHERE id = ?");
+			ps.execute();
+			ResultSet res = ps.getResultSet();
+			if(res.next()) {
+				//Only if there is a valid configuration stored in the database
+				crawler = new Crawler(new HashSet<URL>(),res.getInt(2), res.getInt(3), res.getBoolean(5), res.getInt(6));
+				crawler.crawledDocuments = res.getInt(4);
+			}
+			ps.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			if (loadCon != null) {
+				try {
+					loadCon.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return null;
+	}
 
 	public Crawler(Set<URL> urls, int maximumDepth, int maximumNumberOfDocs, boolean leaveDomain, int parallelism) {
 		this.urls.addAll(urls);

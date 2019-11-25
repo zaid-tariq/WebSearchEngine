@@ -76,5 +76,29 @@ public class SearchAPI {
 		
 		return res;
 	}
+	
+	public void updateScores() {
+		Connection con = null;
+		try {
+			con = new DatabaseCreator().getConnection();
+			DBHandler handler = new DBHandler();
+			handler.computeTfIdf(con);
+		}
+		catch( SQLException ex) {
+			ex.printStackTrace();
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
+		finally {
+			if(con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 }
 

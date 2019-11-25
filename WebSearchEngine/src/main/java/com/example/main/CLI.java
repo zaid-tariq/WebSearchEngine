@@ -39,8 +39,6 @@ public class CLI {
 					e.printStackTrace();
 				}
 			}
-		}
-		
+		}	
 	}
-
 }

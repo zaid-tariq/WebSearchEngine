@@ -7,3 +7,6 @@ Servers/
 .settings/
 log/
 target/
+.mvn/
+*.cmd
+mvnw

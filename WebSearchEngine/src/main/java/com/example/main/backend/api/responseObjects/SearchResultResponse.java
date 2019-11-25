@@ -5,7 +5,7 @@ import java.util.List;
 
 public class SearchResultResponse {
 	
-	class SearchResultItem{
+	public class SearchResultItem{
 		public int rank;
 		public String url;
 		public float score;
@@ -15,9 +15,33 @@ public class SearchResultResponse {
 			this.url = u;
 			this.score = s;
 		}
+
+		public int getRank() {
+			return rank;
+		}
+
+		public void setRank(int rank) {
+			this.rank = rank;
+		}
+
+		public String getUrl() {
+			return url;
+		}
+
+		public void setUrl(String url) {
+			this.url = url;
+		}
+
+		public float getScore() {
+			return score;
+		}
+
+		public void setScore(float score) {
+			this.score = score;
+		}
 	}
 	
-	class Query{
+	public class Query{
 		public int k;
 		public String query;
 		public Query(int k, String query) {
@@ -26,12 +50,24 @@ public class SearchResultResponse {
 		}
 	}
 	
-	class StatItem{
+	public class StatItem{
 		
 		public int df;
 		public String term;
 		public StatItem(int k, String term) {
 			this.df = k;
+			this.term = term;
+		}
+		public int getDf() {
+			return df;
+		}
+		public void setDf(int df) {
+			this.df = df;
+		}
+		public String getTerm() {
+			return term;
+		}
+		public void setTerm(String term) {
 			this.term = term;
 		}
 	}
@@ -58,6 +94,38 @@ public class SearchResultResponse {
 	
 	public void setCollectionSize(int size) {
 		this.cw = size;
+	}
+
+	public List<SearchResultItem> getResultList() {
+		return resultList;
+	}
+
+	public void setResultList(List<SearchResultItem> resultList) {
+		this.resultList = resultList;
+	}
+
+	public List<StatItem> getStat() {
+		return stat;
+	}
+
+	public void setStat(List<StatItem> stat) {
+		this.stat = stat;
+	}
+
+	public Query getQuery() {
+		return query;
+	}
+
+	public void setQuery(Query query) {
+		this.query = query;
+	}
+
+	public int getCw() {
+		return cw;
+	}
+
+	public void setCw(int cw) {
+		this.cw = cw;
 	}
 
 

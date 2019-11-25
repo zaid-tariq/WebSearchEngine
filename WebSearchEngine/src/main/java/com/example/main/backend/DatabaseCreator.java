@@ -2,14 +2,8 @@ package com.example.main.backend;
 
 import java.sql.*;
 import java.util.Properties;
-
-import javax.annotation.PostConstruct;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
 @Component
 @PropertySource(value = { "classpath:application.properties" }, ignoreResourceNotFound = false)

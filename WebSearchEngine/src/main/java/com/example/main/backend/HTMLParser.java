@@ -86,7 +86,7 @@ public class HTMLParser {
 		Matcher hTags = Pattern.compile("<h\\d[^>]*>(.+?)</h\\d>").matcher(content);
 		while (hTags.find()) {
 			for (String word : hTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (word.trim() != "") {
+				if (!word.trim().equals("")) {
 					extractedContent.add(word);
 				}
 			}
@@ -95,7 +95,7 @@ public class HTMLParser {
 		Matcher aTags = Pattern.compile("<a[^>]*>(.+?)</a>").matcher(content);
 		while (aTags.find()) {
 			for (String word : aTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (word.trim() != "") {
+				if (!word.trim().equals("")) {
 					extractedContent.add(word);
 				}
 			}
@@ -104,7 +104,7 @@ public class HTMLParser {
 		Matcher pTags = Pattern.compile("<p[^>]*>(.+?)</p>").matcher(content);
 		while (pTags.find()) {
 			for (String word : pTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (word.trim() != "") {
+				if (!word.trim().equals("")) {
 					extractedContent.add(word);
 				}
 			}
@@ -113,7 +113,7 @@ public class HTMLParser {
 		Matcher spanTags = Pattern.compile("<span[^>]*>(.+?)</span>").matcher(content);
 		while (spanTags.find()) {
 			for (String word : spanTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (word.trim() != "") {
+				if (!word.trim().equals("")) {
 					extractedContent.add(word);
 				}
 			}

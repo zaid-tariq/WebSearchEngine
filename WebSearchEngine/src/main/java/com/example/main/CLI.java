@@ -22,9 +22,9 @@ public class CLI {
 			db.create();
 			DBHandler handler = new DBHandler();
 			SearchResultResponse res = null;
-			if(args[5] == "conjunctive")
+			if(args[5].equals("conjunctive"))
 				res = handler.searchConjunctiveQuery(connection, args[3], Integer.parseInt(args[4]), null);
-			else if(args[5] == "disjunctive")
+			else if(args[5].equals("disjunctive"))
 				res = handler.searchDisjunctiveQuery(connection, args[3], Integer.parseInt(args[4]), null);
 			else
 				throw new Exception("Choose either conjunctive or disjunctive query method");

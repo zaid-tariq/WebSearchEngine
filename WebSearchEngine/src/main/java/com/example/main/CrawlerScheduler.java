@@ -27,8 +27,6 @@ public class CrawlerScheduler {
 		new DBConfig();
 		
 		DatabaseCreator db = new DatabaseCreator();
-		db.create();
-		java.sql.Connection connection = db.getConnection();
 		
 		try {
 			db.create();
@@ -55,14 +53,6 @@ public class CrawlerScheduler {
 
 		} catch (Exception e) {
 			e.printStackTrace();
-		} finally {
-			if (connection != null) {
-				try {
-					connection.close();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}	
 	}
 }

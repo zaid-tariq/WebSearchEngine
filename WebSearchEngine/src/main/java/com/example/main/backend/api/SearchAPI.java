@@ -64,7 +64,6 @@ public class SearchAPI {
 			}
 			// convert to url
 			try {
-				//TODO: make http and https variant. remove that in crawling
 				URL url = new URL("https",site,"/");
 				q.site = url;
 			} catch (Exception ex) {

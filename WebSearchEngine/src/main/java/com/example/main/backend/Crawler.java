@@ -82,7 +82,7 @@ public class Crawler extends Thread {
 		// Get database connection
 		try {
 			DBConfig conf = new DBConfig();
-			con = DriverManager.getConnection("jdbc:postgresql://localhost:5432/project", "postgres", "postgres");
+			con = DriverManager.getConnection(conf.getUrl(),conf.getUsername(),conf.getPassword());
 			stmtNextURL = con.prepareStatement("SELECT * FROM crawlerQueue ORDER BY id FETCH FIRST ROW ONLY");
 			// Insert starting URLs to the database queue table
 			queueURLs(urls, con);

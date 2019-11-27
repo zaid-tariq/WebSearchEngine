@@ -36,7 +36,6 @@ public class SearchAPI {
 		int indexOperator = a_query.indexOf("site:");
 		if (indexOperator == -1) {
 			q.query = a_query;
-			System.out.println("BRANCH 1");
 		} else if (indexOperator > 0) {
 			// Split by site operator --> this is the easy way
 			String[] tokens = a_query.split("site:");
@@ -46,12 +45,10 @@ public class SearchAPI {
 				try {
 					URL url = new URL(site.trim());
 					q.site = url;
-					System.out.println("BRANCH");
 				} catch (Exception ex) {
 					System.out.println("Not a valid site. Operator ignored.");
 				}
 			}
-			System.out.println("BRANCH 2");
 		} else if (indexOperator == 0) {
 			String[] tokens = a_query.split(" ");
 			// Check if site operator and url are combined in one token
@@ -59,14 +56,16 @@ public class SearchAPI {
 			if (tokens[0].trim().length() > 5) {
 				// Yes they are combined
 				site = tokens[0].trim().substring(5);
+				q.query = tokens[1];
 			} else {
 				// No there was a space between it
 				site = tokens[1].trim();
+				q.query = tokens[2];
 			}
-			System.out.println("BRANCH 3");
 			// convert to url
 			try {
-				URL url = new URL(site);
+				//TODO: make http and https variant. remove that in crawling
+				URL url = new URL("https",site,"/");
 				q.site = url;
 			} catch (Exception ex) {
 				System.out.println("Not a valid site. Operator ignored.");

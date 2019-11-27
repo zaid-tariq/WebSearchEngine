@@ -33,7 +33,7 @@ public class CrawlerRunnable implements Runnable {
 		Connection con = null;
 		try {
 			DBConfig conf = new DBConfig();
-			con = DriverManager.getConnection("jdbc:postgresql://localhost:5432/project", "postgres", "postgres");
+			con = DriverManager.getConnection(conf.getUrl(),conf.getUsername(), conf.getPassword());
 
 			HTMLDocument doc = Indexer.index(urlToCrawl);
 

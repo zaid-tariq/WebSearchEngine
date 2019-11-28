@@ -2,19 +2,19 @@
 
 ## Build instructions
 
-Checkout the project repository. Build using Maven.
+Checkout the project repository. Build using Maven.<br/>
 `mvn clean package -Dmaven.test.skip=true     `
-
-Use the following command to run the user facing interface (web app).
+<br/>
+Use the following command to run the user facing interface (web app).<br/>
 `java -jar target/WebSearchEngine-0.0.1-SNAPSHOT.jar`
-
-Use the following command to run the Crawler
+<br/>
+Use the following command to run the Crawler<br/>
 `java -cp target/WebSearchEngine-0.0.1-SNAPSHOT.jar -Dloader.main=com.example.main.CrawlerScheduler org.springframework.boot.loader.PropertiesLauncher @max_depth @max_doc @leaf_domain_boolean @numberOfThreadsToSpawn`
-
-Use the following program to run the Task3-CLI
+<br/>
+Use the following program to run the Task3-CLI<br/>
 `java -cp target/ WebSearchEngine-0.0.1-SNAPSHOT.jar -Dloader.main=com.example.main.CLI org.springframework.boot.loader.PropertiesLauncher @jdbc_url @user @pass @query @k @typeOfSearch`
-
-Use the following to run the Indexing scheduler.
+<br/>
+Use the following to run the Indexing scheduler.<br/>
 `java -cp target/WebSearchEngine-0.0.1-SNAPSHOT.jar -Dloader.main=com.example.main.CLIIndexing org.springframework.boot.loader.PropertiesLauncher @numberOfMilliseconds`
 
 ## Usage instructions

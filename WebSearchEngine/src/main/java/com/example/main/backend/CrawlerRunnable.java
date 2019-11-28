@@ -33,17 +33,18 @@ public class CrawlerRunnable implements Runnable {
 		Connection con = null;
 		try {
 			DBConfig conf = new DBConfig();
-			con = DriverManager.getConnection(conf.getUrl(),conf.getUsername(), conf.getPassword());
+			con = DriverManager.getConnection(conf.getUrl(), conf.getUsername(), conf.getPassword());
 
 			HTMLDocument doc = Indexer.index(urlToCrawl);
+			if (doc != null) {
+				con.setAutoCommit(false);
 
-			con.setAutoCommit(false);
+				insertDocDataToDatabase(doc, con);
+				insertURLSToQueue(doc.getLinks(), depth, con);
+				insertURLToVisited(doc.getUrl(), con);
 
-			insertDocDataToDatabase(doc, con);
-			insertURLSToQueue(doc.getLinks(), depth, con);
-			insertURLToVisited(doc.getUrl(), con);
-
-			con.commit();
+				con.commit();
+			}
 
 		} catch (IOException | URISyntaxException | SQLException e) {
 			e.printStackTrace();

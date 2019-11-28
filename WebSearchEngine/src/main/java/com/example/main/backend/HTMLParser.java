@@ -2,6 +2,7 @@ package com.example.main.backend;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,6 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.core.io.ClassPathResource;
 
+import com.example.main.backend.utils.Utils;
 import com.shekhargulati.urlcleaner.UrlExtractor;
 
 
@@ -25,7 +27,13 @@ public class HTMLParser {
 
 	public HTMLParser() throws IOException {
 		
-		File file = new ClassPathResource("stopwords.txt").getFile();
+		File file = null;
+		try{
+			file = new ClassPathResource("stopwords.txt").getFile();
+		}
+		catch(FileNotFoundException ex) {
+			file = Utils.createTempFileFromInputStream("stopwords.txt");
+		}
 		stopwords = getStopwordsFromFile(file);
 	}
 
@@ -144,13 +152,13 @@ public class HTMLParser {
 	/**
 	 * Turns the file which contains all stopwords into an list of stopwords
 	 * 
-	 * @param file File that contains all stopwords
+	 * @param  File that contains all stopwords
 	 * @return List of stopwords
 	 * @throws IOException
 	 */
 	private List<String> getStopwordsFromFile(File file) throws IOException {
 		List<String> s = new ArrayList<>();
-		BufferedReader r = new BufferedReader(new FileReader(file));
+		BufferedReader r = new BufferedReader( new FileReader(file));
 
 		String word;
 		while ((word = r.readLine()) != null) {

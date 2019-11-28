@@ -1,6 +1,5 @@
 package com.example.main.backend.config;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Properties;
@@ -21,7 +20,7 @@ public class DBConfig {
 		
 		Properties props = new Properties();
 		try {
-			props.load( new FileInputStream(new ClassPathResource("application.properties").getFile()));
+			props.load(new ClassPathResource("application.properties").getInputStream());
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

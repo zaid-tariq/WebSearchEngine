@@ -2,6 +2,7 @@ package com.example.main;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -16,6 +17,7 @@ import org.springframework.core.io.ClassPathResource;
 import com.example.main.backend.Crawler;
 import com.example.main.backend.DatabaseCreator;
 import com.example.main.backend.config.DBConfig;
+import com.example.main.backend.utils.Utils;
 
 
 public class CrawlerScheduler {
@@ -31,7 +33,14 @@ public class CrawlerScheduler {
 		try {
 			db.create();
 			
-			File file = new ClassPathResource("seed_urls.txt").getFile();
+			File file = null;
+			try{
+				file = new ClassPathResource("seed_urls.txt").getFile();
+			}
+			catch(FileNotFoundException ex) {
+				file = Utils.createTempFileFromInputStream("seed_urls.txt");
+			}
+			
 			Set<URL> urls = new HashSet<URL>();
 			BufferedReader r = new BufferedReader(new FileReader(file));
 

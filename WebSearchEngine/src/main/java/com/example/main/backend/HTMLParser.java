@@ -53,7 +53,8 @@ public class HTMLParser {
 		con.connect();
 		String mimeType = con.getContentType();
 		con.disconnect();
-		// The mimeType contains more than that information, therefore we need to check with contains
+		// The mimeType contains more than that information, therefore we need to check
+		// with contains
 		if (!mimeType.contains("text/html")) {
 			return null;
 		}
@@ -95,48 +96,61 @@ public class HTMLParser {
 		// Matcher mTags = Pattern.compile("<[^>]*>").matcher(content);
 		// content = mTags.replaceAll(" "); // by empty string to split the content
 
-		Pattern rm = Pattern.compile("<[^>]*>");
-
+		/**
+		 * NEW PARSING
+		 */
 		LinkedList<String> extractedContent = new LinkedList<String>();
-
-		String specialChars = "(\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|\\.|\\,|\\:|\\;)";
-
-		Matcher hTags = Pattern.compile("<h\\d[^>]*>(.+?)</h\\d>").matcher(content);
-		while (hTags.find()) {
-			for (String word : hTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (!word.trim().equals("")) {
-					extractedContent.add(word);
-				}
+		String specialChars = "(\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|&#39;|\\.|\\,|\\:|\\;|\\[|\\]|\\{|\\}|\\||\\+|\\-|\\*|\\)|\\(|\\=|\\\"|\\|'|'|&|…|#|_)";
+		for (String word : content.replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
+			if (!word.trim().equals("")) {
+				extractedContent.add(word);
 			}
 		}
-
-		Matcher aTags = Pattern.compile("<a[^>]*>(.+?)</a>").matcher(content);
-		while (aTags.find()) {
-			for (String word : aTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (!word.trim().equals("")) {
-					extractedContent.add(word);
-				}
-			}
-		}
-
-		Matcher pTags = Pattern.compile("<p[^>]*>(.+?)</p>").matcher(content);
-		while (pTags.find()) {
-			for (String word : pTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (!word.trim().equals("")) {
-					extractedContent.add(word);
-				}
-			}
-		}
-
-		Matcher spanTags = Pattern.compile("<span[^>]*>(.+?)</span>").matcher(content);
-		while (spanTags.find()) {
-			for (String word : spanTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "")
-					.split("\\s+")) {
-				if (!word.trim().equals("")) {
-					extractedContent.add(word);
-				}
-			}
-		}
+		/**
+		 * OLD PARSING
+		 */
+//		Pattern rm = Pattern.compile("<[^>]*>");
+//
+//		LinkedList<String> extractedContent = new LinkedList<String>();
+//
+//		String specialChars = "(\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|\\.|\\,|\\:|\\;)";
+//
+//		Matcher hTags = Pattern.compile("<h\\d[^>]*>(.+?)</h\\d>").matcher(content);
+//		while (hTags.find()) {
+//			for (String word : hTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
+//				if (!word.trim().equals("")) {
+//					extractedContent.add(word);
+//				}
+//			}
+//		}
+//
+//		Matcher aTags = Pattern.compile("<a[^>]*>(.+?)</a>").matcher(content);
+//		while (aTags.find()) {
+//			for (String word : aTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
+//				if (!word.trim().equals("")) {
+//					extractedContent.add(word);
+//				}
+//			}
+//		}
+//
+//		Matcher pTags = Pattern.compile("<p[^>]*>(.+?)</p>").matcher(content);
+//		while (pTags.find()) {
+//			for (String word : pTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
+//				if (!word.trim().equals("")) {
+//					extractedContent.add(word);
+//				}
+//			}
+//		}
+//
+//		Matcher spanTags = Pattern.compile("<span[^>]*>(.+?)</span>").matcher(content);
+//		while (spanTags.find()) {
+//			for (String word : spanTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "")
+//					.split("\\s+")) {
+//				if (!word.trim().equals("")) {
+//					extractedContent.add(word);
+//				}
+//			}
+//		}
 
 		// 4. remove all stopwords, stemming and term frequency calculation at the same
 		// time for efficiency

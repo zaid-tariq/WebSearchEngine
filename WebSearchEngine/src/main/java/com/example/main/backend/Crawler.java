@@ -196,6 +196,33 @@ public class Crawler extends Thread {
 	 * @throws MalformedURLException
 	 */
 	private void queueURLs(Set<URL> urls, Connection con) throws SQLException, MalformedURLException {
+		PreparedStatement stmtCheckIfExists = con
+				.prepareStatement("SELECT count(url) FROM documents WHERE url LIKE ? GROUP BY url"
+						+ "	UNION "
+						+ "SELECT count(url) FROM crawlerQueue WHERE url LIKE ? GROUP BY url");
+		
+		// Check if URL is already crawled. If so --> don't process it further
+		// Reduces the number of accesses to a single domain
+		
+		Set<URL> urlsAlreadyCrawled = new HashSet<URL>();
+		for(URL url : urls) {
+			stmtCheckIfExists.setString(1, url.toString());
+			stmtCheckIfExists.setString(2, url.toString());
+			
+			stmtCheckIfExists.execute();
+			ResultSet s = stmtCheckIfExists.getResultSet();
+			while(s.next()) {
+				if(s.getInt(1) > 0 ) {
+					urlsAlreadyCrawled.add(url);
+				}
+			}
+		}
+			
+		for(URL url : urlsAlreadyCrawled) {
+			urls.remove(url);
+		}
+		
+	
 		PreparedStatement stmtQueueURLs = con
 				.prepareStatement("INSERT INTO crawlerQueue(id, url, current_depth) VALUES (DEFAULT, ?, ?)");
 
@@ -207,8 +234,9 @@ public class Crawler extends Thread {
 
 		stmtQueueURLs.executeBatch();
 
+		//If conflict on unique constraint url occurs --> ignore conflict and do nothing
 		PreparedStatement stmt = con
-				.prepareStatement("INSERT INTO documents (docid, url,crawled_on_date, language) VALUES (DEFAULT,?,NULL,NULL)");
+				.prepareStatement("INSERT INTO documents (docid, url,crawled_on_date, language) VALUES (DEFAULT,?,NULL,NULL)"); //ON CONFLICT DO NOTHING
 
 		for (URL url : urls) {
 			stmt.setString(1, url.toString());

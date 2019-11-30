@@ -53,7 +53,8 @@ public class HTMLParser {
 		con.connect();
 		String mimeType = con.getContentType();
 		con.disconnect();
-		if (!mimeType.equals("text/html")) {
+		// The mimeType contains more than that information, therefore we need to check with contains
+		if (!mimeType.contains("text/html")) {
 			return null;
 		}
 

@@ -82,7 +82,7 @@ public class Crawler extends Thread {
 		// Get database connection
 		try {
 			DBConfig conf = new DBConfig();
-			con = DriverManager.getConnection(conf.getUrl(),conf.getUsername(),conf.getPassword());
+			con = DriverManager.getConnection(conf.getUrl(), conf.getUsername(), conf.getPassword());
 			stmtNextURL = con.prepareStatement("SELECT * FROM crawlerQueue ORDER BY id FETCH FIRST ROW ONLY");
 			// Insert starting URLs to the database queue table
 			queueURLs(urls, con);
@@ -99,6 +99,7 @@ public class Crawler extends Thread {
 					Object[] entry = getNextURL();
 					if (entry != null && maximumDepth != (int) entry[1]) {
 						if (leaveDomain) {
+							System.out.println("Next document");
 							exs.submit(new CrawlerRunnable((URL) entry[0], (int) entry[1]));
 							crawledDocuments++;
 						} else {
@@ -197,32 +198,30 @@ public class Crawler extends Thread {
 	 */
 	private void queueURLs(Set<URL> urls, Connection con) throws SQLException, MalformedURLException {
 		PreparedStatement stmtCheckIfExists = con
-				.prepareStatement("SELECT count(url) FROM documents WHERE url LIKE ? GROUP BY url"
-						+ "	UNION "
+				.prepareStatement("SELECT count(url) FROM documents WHERE url LIKE ? GROUP BY url" + "	UNION "
 						+ "SELECT count(url) FROM crawlerQueue WHERE url LIKE ? GROUP BY url");
-		
+
 		// Check if URL is already crawled. If so --> don't process it further
 		// Reduces the number of accesses to a single domain
-		
+
 		Set<URL> urlsAlreadyCrawled = new HashSet<URL>();
-		for(URL url : urls) {
+		for (URL url : urls) {
 			stmtCheckIfExists.setString(1, url.toString());
 			stmtCheckIfExists.setString(2, url.toString());
-			
+
 			stmtCheckIfExists.execute();
 			ResultSet s = stmtCheckIfExists.getResultSet();
-			while(s.next()) {
-				if(s.getInt(1) > 0 ) {
+			while (s.next()) {
+				if (s.getInt(1) > 0) {
 					urlsAlreadyCrawled.add(url);
 				}
 			}
 		}
-			
-		for(URL url : urlsAlreadyCrawled) {
+
+		for (URL url : urlsAlreadyCrawled) {
 			urls.remove(url);
 		}
-		
-	
+
 		PreparedStatement stmtQueueURLs = con
 				.prepareStatement("INSERT INTO crawlerQueue(id, url, current_depth) VALUES (DEFAULT, ?, ?)");
 
@@ -234,9 +233,10 @@ public class Crawler extends Thread {
 
 		stmtQueueURLs.executeBatch();
 
-		//If conflict on unique constraint url occurs --> ignore conflict and do nothing
-		PreparedStatement stmt = con
-				.prepareStatement("INSERT INTO documents (docid, url,crawled_on_date, language) VALUES (DEFAULT,?,NULL,NULL)"); //ON CONFLICT DO NOTHING
+		// If conflict on unique constraint url occurs --> ignore conflict and do
+		// nothing
+		PreparedStatement stmt = con.prepareStatement(
+				"INSERT INTO documents (docid, url,crawled_on_date, language) VALUES (DEFAULT,?,NULL,NULL) ON CONFLICT DO NOTHING");
 
 		for (URL url : urls) {
 			stmt.setString(1, url.toString());

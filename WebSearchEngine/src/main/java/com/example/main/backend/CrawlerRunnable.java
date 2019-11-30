@@ -131,9 +131,10 @@ public class CrawlerRunnable implements Runnable {
 
 	private void insertURLSToQueue(Set<URL> urls, int currentDepth, Connection con) throws SQLException {
 
-		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT count(docid) FROM documents WHERE url LIKE ?");
+		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT count(docid) FROM documents WHERE url LIKE ? AND crawled_on_date = NULL");
 
 		PreparedStatement stmt = con.prepareStatement("INSERT INTO crawlerQueue (url, current_depth) VALUES (?,?)");
+		System.out.println();
 		for (URL url : urls) {
 			stmtgetDocId.setString(1, url.toString());
 			stmtgetDocId.execute();

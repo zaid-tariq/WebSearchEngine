@@ -6,9 +6,11 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -20,18 +22,16 @@ import org.springframework.core.io.ClassPathResource;
 import com.example.main.backend.utils.Utils;
 import com.shekhargulati.urlcleaner.UrlExtractor;
 
-
 public class HTMLParser {
 
 	public List<String> stopwords;
 
 	public HTMLParser() throws IOException {
-		
+
 		File file = null;
-		try{
+		try {
 			file = new ClassPathResource("stopwords.txt").getFile();
-		}
-		catch(FileNotFoundException ex) {
+		} catch (FileNotFoundException ex) {
 			file = Utils.createTempFileFromInputStream("stopwords.txt");
 		}
 		stopwords = getStopwordsFromFile(file);
@@ -47,6 +47,17 @@ public class HTMLParser {
 	 */
 	public HTMLDocument parse(URL urlToIndex) throws IOException {
 		HTMLDocument doc = new HTMLDocument(urlToIndex);
+
+		// Test if document is HTML Document
+		HttpURLConnection con = (HttpURLConnection) urlToIndex.openConnection();
+		con.connect();
+		String mimeType = con.getContentType();
+		con.disconnect();
+		// The mimeType contains more than that information, therefore we need to check
+		// with contains
+		if (!mimeType.contains("text/html")) {
+			return null;
+		}
 
 		BufferedReader br = new BufferedReader(new InputStreamReader(urlToIndex.openStream()));
 
@@ -64,10 +75,10 @@ public class HTMLParser {
 
 		// 2. parse the file for links
 
-		Matcher mLinks = Pattern.compile("href=\"(.*?)\"").matcher(content);
+		Matcher mLinks = Pattern.compile("<a[^>]*href=\"(.*?)\"[^>]*>").matcher(content);
 		while (mLinks.find()) {
 			try {
-				List<String> urls = UrlExtractor.extractUrls(mLinks.group());
+				List<String> urls = UrlExtractor.extractUrls(mLinks.group(1));
 				for (String url : urls) {
 					doc.addLink(new URL(url));
 				}
@@ -85,47 +96,61 @@ public class HTMLParser {
 		// Matcher mTags = Pattern.compile("<[^>]*>").matcher(content);
 		// content = mTags.replaceAll(" "); // by empty string to split the content
 
-		Pattern rm = Pattern.compile("<[^>]*>");
-
+		/**
+		 * NEW PARSING
+		 */
 		LinkedList<String> extractedContent = new LinkedList<String>();
-
-		String specialChars = "(\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|\\.|\\,|\\:|\\;)";
-
-		Matcher hTags = Pattern.compile("<h\\d[^>]*>(.+?)</h\\d>").matcher(content);
-		while (hTags.find()) {
-			for (String word : hTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (!word.trim().equals("")) {
-					extractedContent.add(word);
-				}
+		String specialChars = "(\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|&#39;|\\.|\\,|\\:|\\;|\\[|\\]|\\{|\\}|\\||\\+|\\-|\\*|\\)|\\(|\\=|\\\"|\\|'|'|&|…|#|_)";
+		for (String word : content.replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
+			if (!word.trim().equals("")) {
+				extractedContent.add(word);
 			}
 		}
-
-		Matcher aTags = Pattern.compile("<a[^>]*>(.+?)</a>").matcher(content);
-		while (aTags.find()) {
-			for (String word : aTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (!word.trim().equals("")) {
-					extractedContent.add(word);
-				}
-			}
-		}
-
-		Matcher pTags = Pattern.compile("<p[^>]*>(.+?)</p>").matcher(content);
-		while (pTags.find()) {
-			for (String word : pTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (!word.trim().equals("")) {
-					extractedContent.add(word);
-				}
-			}
-		}
-		
-		Matcher spanTags = Pattern.compile("<span[^>]*>(.+?)</span>").matcher(content);
-		while (spanTags.find()) {
-			for (String word : spanTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-				if (!word.trim().equals("")) {
-					extractedContent.add(word);
-				}
-			}
-		}
+		/**
+		 * OLD PARSING
+		 */
+//		Pattern rm = Pattern.compile("<[^>]*>");
+//
+//		LinkedList<String> extractedContent = new LinkedList<String>();
+//
+//		String specialChars = "(\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|\\.|\\,|\\:|\\;)";
+//
+//		Matcher hTags = Pattern.compile("<h\\d[^>]*>(.+?)</h\\d>").matcher(content);
+//		while (hTags.find()) {
+//			for (String word : hTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
+//				if (!word.trim().equals("")) {
+//					extractedContent.add(word);
+//				}
+//			}
+//		}
+//
+//		Matcher aTags = Pattern.compile("<a[^>]*>(.+?)</a>").matcher(content);
+//		while (aTags.find()) {
+//			for (String word : aTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
+//				if (!word.trim().equals("")) {
+//					extractedContent.add(word);
+//				}
+//			}
+//		}
+//
+//		Matcher pTags = Pattern.compile("<p[^>]*>(.+?)</p>").matcher(content);
+//		while (pTags.find()) {
+//			for (String word : pTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
+//				if (!word.trim().equals("")) {
+//					extractedContent.add(word);
+//				}
+//			}
+//		}
+//
+//		Matcher spanTags = Pattern.compile("<span[^>]*>(.+?)</span>").matcher(content);
+//		while (spanTags.find()) {
+//			for (String word : spanTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "")
+//					.split("\\s+")) {
+//				if (!word.trim().equals("")) {
+//					extractedContent.add(word);
+//				}
+//			}
+//		}
 
 		// 4. remove all stopwords, stemming and term frequency calculation at the same
 		// time for efficiency
@@ -152,13 +177,13 @@ public class HTMLParser {
 	/**
 	 * Turns the file which contains all stopwords into an list of stopwords
 	 * 
-	 * @param  File that contains all stopwords
+	 * @param File that contains all stopwords
 	 * @return List of stopwords
 	 * @throws IOException
 	 */
 	private List<String> getStopwordsFromFile(File file) throws IOException {
 		List<String> s = new ArrayList<>();
-		BufferedReader r = new BufferedReader( new FileReader(file));
+		BufferedReader r = new BufferedReader(new FileReader(file));
 
 		String word;
 		while ((word = r.readLine()) != null) {

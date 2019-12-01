@@ -33,17 +33,18 @@ public class CrawlerRunnable implements Runnable {
 		Connection con = null;
 		try {
 			DBConfig conf = new DBConfig();
-			con = DriverManager.getConnection(conf.getUrl(),conf.getUsername(), conf.getPassword());
+			con = DriverManager.getConnection(conf.getUrl(), conf.getUsername(), conf.getPassword());
 
 			HTMLDocument doc = Indexer.index(urlToCrawl);
+			if (doc != null) {
+				con.setAutoCommit(false);
 
-			con.setAutoCommit(false);
+				insertDocDataToDatabase(doc, con);
+				insertURLSToQueue(doc.getLinks(), depth, con);
+				insertURLToVisited(doc.getUrl(), con);
 
-			insertDocDataToDatabase(doc, con);
-			insertURLSToQueue(doc.getLinks(), depth, con);
-			insertURLToVisited(doc.getUrl(), con);
-
-			con.commit();
+				con.commit();
+			}
 
 		} catch (IOException | URISyntaxException | SQLException e) {
 			e.printStackTrace();
@@ -130,14 +131,17 @@ public class CrawlerRunnable implements Runnable {
 
 	private void insertURLSToQueue(Set<URL> urls, int currentDepth, Connection con) throws SQLException {
 
-		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
+		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT count(docid) FROM documents WHERE url LIKE ? AND crawled_on_date = NULL");
 
 		PreparedStatement stmt = con.prepareStatement("INSERT INTO crawlerQueue (url, current_depth) VALUES (?,?)");
+		System.out.println();
 		for (URL url : urls) {
 			stmtgetDocId.setString(1, url.toString());
 			stmtgetDocId.execute();
 			ResultSet s = stmtgetDocId.getResultSet();
-			if (s.next()) {
+			s.next();
+			System.out.println(s.getInt(1));
+			if (s.getInt(1) == 0) {
 				stmt.setString(1, url.toString());
 				stmt.setInt(2, currentDepth);
 				stmt.addBatch();

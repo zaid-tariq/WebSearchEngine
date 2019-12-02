@@ -12,43 +12,26 @@ import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Service;
 
 import com.example.main.backend.Crawler;
 import com.example.main.backend.DatabaseCreator;
+import com.example.main.backend.config.DBConfig;
 import com.example.main.backend.utils.Utils;
 
-@Service
-public class CrawlerScheduler implements CommandLineRunner {
+
+public class CrawlerScheduler {
 	
-	@Autowired
-	DatabaseCreator dbc;
-	
-	@Autowired
-	Crawler crawl;
-	
-	@Value("${crawler.max_docs}")
-	int max_docs;
-	
-	@Value("${crawler.max_depth}")
-	int max_depth;
-	
-	@Value("${crawler.leaf_domain_boolean}")
-	boolean leaf_domain;
-	
-	@Value("${crawler.numberOfThreadsToSpawn}")
-	int numOfThreads;
-	
-	
-	@Override
-	public void run(String... args) throws SQLException, URISyntaxException, IOException, InterruptedException {
+	public static void main(String[] args) throws SQLException, URISyntaxException, IOException, InterruptedException {
+		
+		//@max_depth, @max_docs, @leaf_domain_boolean, @numberOfThreadsToSpawn
+		
+		new DBConfig();
+		
+		DatabaseCreator db = new DatabaseCreator();
 		
 		try {
-			dbc.create();
+			db.create();
 			
 			File file = null;
 			try{
@@ -63,6 +46,7 @@ public class CrawlerScheduler implements CommandLineRunner {
 
 			String word;
 			while ((word = r.readLine()) != null) {
+				System.out.println(word);
 				try {
 					urls.add(new URL(word.trim()));
 				}
@@ -71,13 +55,13 @@ public class CrawlerScheduler implements CommandLineRunner {
 				}
 			}
 			r.close();
-			crawl.init(urls, max_depth, max_docs, leaf_domain, numOfThreads);
+			Crawler crawl = new Crawler(urls, Integer.parseInt(args[0]), Integer.parseInt(args[1]),
+					Boolean.parseBoolean(args[2]), Integer.parseInt(args[3]));
 			crawl.start();
-			System.out.println("Crawler Started");
+			System.out.println("STARTTTTT");
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}	
 	}
-
 }

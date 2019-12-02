@@ -1,33 +1,26 @@
 package com.example.main.backend;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
 import com.example.main.backend.api.SearchAPI;
 
-@Component
-public class IndexingThread extends Thread{
+public class IndexingThread extends Thread {
 
-	@Value("${indexing.interval.milliseconds}")
-	private int sleepSeconds;
-	@Autowired
-	SearchAPI api;
+	private int sleepSeconds = 600;
 
 	/**
 	 *
 	 * @param seconds time to sleep till the next computation of tf idf scores
 	 */
-	public IndexingThread() {
+	public IndexingThread(int milliseconds) {
 		this.setDaemon(true);
+		this.sleepSeconds = milliseconds;
 	}
 
 	@Override
 	public void run() {
 		try {
 			while (true) {
-				System.out.println("updating scores");
-				api.updateScores();
+				SearchAPI searchAPI = new SearchAPI();
+				searchAPI.updateScores();
 				IndexingThread.sleep(sleepSeconds);
 			}
 		} catch (InterruptedException e) {

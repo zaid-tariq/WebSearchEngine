@@ -1,28 +1,30 @@
 package com.example.main.backend.api;
 
 import java.net.URL;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 import com.example.main.backend.DBHandler;
+import com.example.main.backend.DatabaseCreator;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 
-@Component
 public class SearchAPI {
-	
-	@Autowired
-	DBHandler handler;
 
 	class Query {
 		public String query;
 		public URL site;
-		public Query() {}
+
+		public Query() {
+
+		}
+
 		public Query(String q, URL u) {
 			this.query = q;
 			this.site = u;
 		}
+	}
+
+	public SearchAPI() {
 	}
 
 	public Query resolveSiteOperator(String a_query) {
@@ -74,15 +76,28 @@ public class SearchAPI {
 	public SearchResultResponse searchAPIconjunctive(String a_query, int limit) {
 
 		Query q = resolveSiteOperator(a_query);
+		Connection con = null;
 		SearchResultResponse res = new SearchResultResponse(q.query, limit);
 
 		try {
-			res = handler.searchConjunctiveQuery(q.query, limit, res);
-			int cw = handler.getCollectionSize();
+			con = new DatabaseCreator().getConnection();
+			DBHandler handler = new DBHandler();
+			res = handler.searchConjunctiveQuery(con, q.query, limit, res);
+			int cw = handler.getCollectionSize(con);
 			res.setCollectionSize(cw);
-			res = handler.getStats(q.query, res);
+			res = handler.getStats(con, q.query, res);
+		} catch (SQLException ex) {
+			ex.printStackTrace();
 		} catch (Exception ex) {
 			ex.printStackTrace();
+		} finally {
+			if (con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 		res.filterResultsWithSite(q.site);
 		return res;
@@ -92,24 +107,50 @@ public class SearchAPI {
 
 		Query q = resolveSiteOperator(a_query);
 		SearchResultResponse res = new SearchResultResponse(q.query, limit);
+		Connection con = null;
+
 		try {
-			res = handler.searchDisjunctiveQuery(q.query, limit, res);
-			int cw = handler.getCollectionSize();
+			con = new DatabaseCreator().getConnection();
+			DBHandler handler = new DBHandler();
+			res = handler.searchDisjunctiveQuery(con, q.query, limit, res);
+			int cw = handler.getCollectionSize(con);
 			res.setCollectionSize(cw);
-			res = handler.getStats( q.query, res);
+			res = handler.getStats(con, q.query, res);
+		} catch (SQLException ex) {
+			ex.printStackTrace();
 		} catch (Exception ex) {
 			ex.printStackTrace();
+		} finally {
+			if (con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 		res.filterResultsWithSite(q.site);
 		return res;
 	}
 
 	public void updateScores() {
-
+		Connection con = null;
 		try {
-			handler.computeTfIdf();
-		}catch (Exception ex) {
+			con = new DatabaseCreator().getConnection();
+			DBHandler handler = new DBHandler();
+			handler.computeTfIdf(con);
+		} catch (SQLException ex) {
 			ex.printStackTrace();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		} finally {
+			if (con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 }

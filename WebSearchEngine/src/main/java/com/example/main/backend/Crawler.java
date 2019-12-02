@@ -8,7 +8,6 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -36,39 +35,16 @@ public class Crawler extends Thread {
 	private PreparedStatement stmtNextURL;
 	private ExecutorService exs;
 
-	public static Crawler restore(int id) {
-		// Get database connection
-		Crawler crawler = null;
-		Connection loadCon = null;
-		try {
-			DBConfig conf = new DBConfig();
-			loadCon = DriverManager.getConnection(conf.getUrl(), conf.getUsername(), conf.getPassword());
-			PreparedStatement ps = loadCon.prepareStatement(
-					"SELECT id, maximum_depth, maximum_docs, crawled_docs, leave_domain, parallelism FROM crawlerState WHERE id = ?");
-			ps.execute();
-			ResultSet res = ps.getResultSet();
-			if (res.next()) {
-				// Only if there is a valid configuration stored in the database
-				crawler = new Crawler(new HashSet<URL>(), res.getInt(2), res.getInt(3), res.getBoolean(5),
-						res.getInt(6));
-				crawler.crawledDocuments = res.getInt(4);
-			}
-			ps.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		} finally {
-			if (loadCon != null) {
-				try {
-					loadCon.close();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		return null;
-	}
-
+	/**
+	 * Creates a new crawler with the specified parameters. If there is already a configuration in the database, then the set parameters will be overridden.
+	 * @param urls Starting URLs
+	 * @param maximumDepth Maximum depth to crawl
+	 * @param maximumNumberOfDocs Maximum number of documents to crawl
+	 * @param leaveDomain Should the crawler also crawl documents of another domain
+	 * @param parallelism Number of threads which are used to crawl the web
+	 */
 	public Crawler(Set<URL> urls, int maximumDepth, int maximumNumberOfDocs, boolean leaveDomain, int parallelism) {
+		super("crawler");
 		this.urls.addAll(urls);
 		this.maximumDepth = maximumDepth;
 		this.maximumNumberOfDocs = maximumNumberOfDocs;
@@ -77,7 +53,6 @@ public class Crawler extends Thread {
 			throw new IllegalArgumentException("The number of threads cannot be smaller than 1");
 		}
 		this.parallelism = parallelism;
-		exs = Executors.newFixedThreadPool(parallelism);
 
 		// Get database connection
 		try {
@@ -89,6 +64,42 @@ public class Crawler extends Thread {
 		} catch (SQLException | MalformedURLException e) {
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public synchronized void start() {
+		Connection loadCon = null;
+		try {
+			DBConfig conf = new DBConfig();
+			loadCon = DriverManager.getConnection(conf.getUrl(), conf.getUsername(), conf.getPassword());
+			PreparedStatement ps = loadCon.prepareStatement(
+					"SELECT maximum_depth, maximum_docs, crawled_docs, leave_domain, parallelism FROM crawlerState");
+			ps.execute();
+			ResultSet res = ps.getResultSet();
+			if (res.next()) {
+				// Only if there is a valid configuration stored in the database
+				this.maximumDepth = res.getInt(1);
+				this.maximumNumberOfDocs = res.getInt(2);
+				this.crawledDocuments = res.getInt(3);
+				this.leaveDomain = res.getBoolean(4);
+				this.parallelism = res.getInt(5);
+			}
+			res.close();
+			ps.close();
+			
+			exs = Executors.newFixedThreadPool(parallelism);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			if (loadCon != null) {
+				try {
+					loadCon.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		super.start();
 	}
 
 	@Override
@@ -133,15 +144,16 @@ public class Crawler extends Thread {
 
 	/**
 	 * Save current state of the crawler into the database
-	 * 
-	 * @return id of the save state, -1 if there was an error
 	 */
-	public int cancel() {
+	public void cancel() {
 		crawl = false;
 		try {
+			PreparedStatement clearCrawlerState = con.prepareStatement("TRUNCATE TABLE crawlerState RESTART IDENTITY");
+			clearCrawlerState.execute();
+			clearCrawlerState.close();
+
 			PreparedStatement ps = con.prepareStatement(
-					"INSERT INTO crawlerState (id, maximum_depth, maximum_docs, crawled_docs, leave_domain, parallelism) VALUES (DEFAULT,?,?,?,?,?)",
-					Statement.RETURN_GENERATED_KEYS);
+					"INSERT INTO crawlerState (maximum_depth, maximum_docs, crawled_docs, leave_domain, parallelism) VALUES (?,?,?,?,?)");
 			ps.setInt(1, maximumDepth);
 			ps.setInt(2, maximumNumberOfDocs);
 			ps.setInt(3, crawledDocuments);
@@ -149,17 +161,10 @@ public class Crawler extends Thread {
 			ps.setInt(5, parallelism);
 
 			ps.executeUpdate();
-
-			ResultSet key = ps.getGeneratedKeys();
-			if (key.next()) {
-				ps.close();
-				return key.getInt(1);
-			}
 			ps.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return -1;
 	}
 
 	/**
@@ -189,7 +194,7 @@ public class Crawler extends Thread {
 	}
 
 	/**
-	 * Inserts the provided URLs into the database
+	 * Inserts the provided URLs into the database if they are not already listed
 	 * 
 	 * @param urls URLs to insert
 	 * @param con  Connection to the database

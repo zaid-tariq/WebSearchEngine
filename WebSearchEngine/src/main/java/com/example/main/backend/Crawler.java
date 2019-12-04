@@ -15,9 +15,16 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 import com.example.main.backend.config.DBConfig;
 
+@Component
 public class Crawler extends Thread {
+	
+	@Autowired
+	DBHandler db;
 
 	private Queue<URL> urls = new LinkedList<>();
 
@@ -31,8 +38,6 @@ public class Crawler extends Thread {
 	private int parallelism;
 
 	private boolean crawl = true;
-	private Connection con;
-	private PreparedStatement stmtNextURL;
 	private ExecutorService exs;
 
 	/**
@@ -43,8 +48,7 @@ public class Crawler extends Thread {
 	 * @param leaveDomain Should the crawler also crawl documents of another domain
 	 * @param parallelism Number of threads which are used to crawl the web
 	 */
-	public Crawler(Set<URL> urls, int maximumDepth, int maximumNumberOfDocs, boolean leaveDomain, int parallelism) {
-		super("crawler");
+	public void init(Set<URL> urls, int maximumDepth, int maximumNumberOfDocs, boolean leaveDomain, int parallelism) {
 		this.urls.addAll(urls);
 		this.maximumDepth = maximumDepth;
 		this.maximumNumberOfDocs = maximumNumberOfDocs;
@@ -56,11 +60,8 @@ public class Crawler extends Thread {
 
 		// Get database connection
 		try {
-			DBConfig conf = new DBConfig();
-			con = DriverManager.getConnection(conf.getUrl(), conf.getUsername(), conf.getPassword());
-			stmtNextURL = con.prepareStatement("SELECT * FROM crawlerQueue ORDER BY id FETCH FIRST ROW ONLY");
 			// Insert starting URLs to the database queue table
-			queueURLs(urls, con);
+			db.queueURLs(urls);
 		} catch (SQLException | MalformedURLException e) {
 			e.printStackTrace();
 		}
@@ -107,11 +108,12 @@ public class Crawler extends Thread {
 		try {
 			while (crawl) {
 				if (maximumNumberOfDocs != crawledDocuments) {
-					Object[] entry = getNextURL();
+					Object[] entry = db.getNextURL();
 					if (entry != null && maximumDepth != (int) entry[1]) {
 						if (leaveDomain) {
-							System.out.println("Next document");
-							exs.submit(new CrawlerRunnable((URL) entry[0], (int) entry[1]));
+							CrawlerRunnable runnable = new CrawlerRunnable();
+							runnable.init((URL) entry[0], (int) entry[1]);
+							exs.submit(runnable);
 							crawledDocuments++;
 						} else {
 							boolean contains = false;
@@ -121,133 +123,22 @@ public class Crawler extends Thread {
 								}
 							}
 							if (contains) {
-								exs.submit(new CrawlerRunnable((URL) entry[0], (int) entry[1]));
+								CrawlerRunnable runnable = new CrawlerRunnable();
+								runnable.init((URL) entry[0], (int) entry[1]);
+								exs.submit(runnable);
 								crawledDocuments++;
 							}
 						}
 					}
 				} else {
 					// Reached maximum to crawl documents -> stop crawler
-					cancel();
+					db.cancel(maximumNumberOfDocs, maximumDepth, crawledDocuments, leaveDomain, parallelism);
 				}
 			}
 		} catch (SQLException | URISyntaxException e) {
 			e.printStackTrace();
-		} finally {
-			try {
-				con.close();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-		}
+		} 
 	}
 
-	/**
-	 * Save current state of the crawler into the database
-	 */
-	public void cancel() {
-		crawl = false;
-		try {
-			PreparedStatement clearCrawlerState = con.prepareStatement("TRUNCATE TABLE crawlerState RESTART IDENTITY");
-			clearCrawlerState.execute();
-			clearCrawlerState.close();
-
-			PreparedStatement ps = con.prepareStatement(
-					"INSERT INTO crawlerState (maximum_depth, maximum_docs, crawled_docs, leave_domain, parallelism) VALUES (?,?,?,?,?)");
-			ps.setInt(1, maximumDepth);
-			ps.setInt(2, maximumNumberOfDocs);
-			ps.setInt(3, crawledDocuments);
-			ps.setBoolean(4, leaveDomain);
-			ps.setInt(5, parallelism);
-
-			ps.executeUpdate();
-			ps.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * Gets the next URL from the database
-	 * 
-	 * @return null if there are no more URLs in the database, otherwise the URL and
-	 *         the depth of that URL in the hierarchy
-	 * @throws SQLException
-	 * @throws URISyntaxException
-	 */
-	private Object[] getNextURL() throws SQLException, URISyntaxException {
-		stmtNextURL.execute();
-		ResultSet res = stmtNextURL.getResultSet();
-		if (res.next()) {
-			PreparedStatement stmnt = this.con.prepareStatement("DELETE FROM crawlerQueue WHERE id = ?");
-			stmnt.setInt(1, res.getInt(1));
-			stmnt.execute();
-			stmnt.close();
-			try {
-				return new Object[] { new URL(res.getString(2)), res.getInt(3) };
-			} catch (MalformedURLException e) {
-				return null;
-			}
-		}
-		return null;
-
-	}
-
-	/**
-	 * Inserts the provided URLs into the database if they are not already listed
-	 * 
-	 * @param urls URLs to insert
-	 * @param con  Connection to the database
-	 * @throws SQLException
-	 * @throws MalformedURLException
-	 */
-	private void queueURLs(Set<URL> urls, Connection con) throws SQLException, MalformedURLException {
-		PreparedStatement stmtCheckIfExists = con
-				.prepareStatement("SELECT count(url) FROM documents WHERE url LIKE ? GROUP BY url" + "	UNION "
-						+ "SELECT count(url) FROM crawlerQueue WHERE url LIKE ? GROUP BY url");
-
-		// Check if URL is already crawled. If so --> don't process it further
-		// Reduces the number of accesses to a single domain
-
-		Set<URL> urlsAlreadyCrawled = new HashSet<URL>();
-		for (URL url : urls) {
-			stmtCheckIfExists.setString(1, url.toString());
-			stmtCheckIfExists.setString(2, url.toString());
-
-			stmtCheckIfExists.execute();
-			ResultSet s = stmtCheckIfExists.getResultSet();
-			while (s.next()) {
-				if (s.getInt(1) > 0) {
-					urlsAlreadyCrawled.add(url);
-				}
-			}
-		}
-
-		for (URL url : urlsAlreadyCrawled) {
-			urls.remove(url);
-		}
-
-		PreparedStatement stmtQueueURLs = con
-				.prepareStatement("INSERT INTO crawlerQueue(id, url, current_depth) VALUES (DEFAULT, ?, ?)");
-
-		for (URL url : urls) {
-			stmtQueueURLs.setString(1, url.toString());
-			stmtQueueURLs.setInt(2, 0);
-			stmtQueueURLs.addBatch();
-		}
-
-		stmtQueueURLs.executeBatch();
-
-		// If conflict on unique constraint url occurs --> ignore conflict and do
-		// nothing
-		PreparedStatement stmt = con.prepareStatement(
-				"INSERT INTO documents (docid, url,crawled_on_date, language) VALUES (DEFAULT,?,NULL,NULL) ON CONFLICT DO NOTHING");
-
-		for (URL url : urls) {
-			stmt.setString(1, url.toString());
-			stmt.addBatch();
-		}
-
-		stmt.executeBatch();
-	}
+	
 }

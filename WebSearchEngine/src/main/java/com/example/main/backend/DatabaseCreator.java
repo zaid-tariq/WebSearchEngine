@@ -1,6 +1,8 @@
 package com.example.main.backend;
 
 import java.sql.*;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
@@ -10,36 +12,14 @@ import com.example.main.backend.config.DBConfig;
 @PropertySource(value = { "classpath:application.properties" }, ignoreResourceNotFound = false)
 public class DatabaseCreator {
 
-	private Connection connection;
-	String url;
-	String user;
-	String pass;
+	@Autowired
+	DBHandler db;
 
-	public DatabaseCreator() {
-		DBConfig conf = new DBConfig();
-		this.url = conf.getUrl();
-		this.user = conf.getUsername();
-		this.pass = conf.getPassword();
-	}
-
-	public DatabaseCreator(String url, String user, String pass) {
-		this.url = url;
-		this.user = user;
-		this.pass = pass;
-	}
-
-	public Connection getConnection() throws SQLException {
-
-		if (this.connection != null) {
-			return this.connection;
-		}
-		this.connection = DriverManager.getConnection(url, user, pass);
-		return connection;
-	}
 
 	public void create() {
+		Connection connection = null;
 		try {
-			connection = this.getConnection();
+			connection = db.getConnection();
 
 			// CREATE TABLE IF NOT EXISTS s by DDL statements
 			createDocumentsTable(connection);

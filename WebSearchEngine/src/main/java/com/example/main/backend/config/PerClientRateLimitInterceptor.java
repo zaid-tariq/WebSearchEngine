@@ -24,11 +24,8 @@ public class PerClientRateLimitInterceptor implements HandlerInterceptor {
 	  @Override
 	  public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
 	      Object handler) throws Exception {
-		  
-		System.out.println("##### Request intercepted #####");
 
 	    String clientIP = getClientIP(request);
-	    System.out.println("IP:"+clientIP);
 	    Bucket requestBucket = this.buckets.computeIfAbsent(clientIP, key -> standardBucket());
 
 	    ConsumptionProbe probe = requestBucket.tryConsumeAndReturnRemaining(1);
@@ -37,7 +34,6 @@ public class PerClientRateLimitInterceptor implements HandlerInterceptor {
 	          Long.toString(probe.getRemainingTokens()));
 	      return true;
 	    }
-	    System.out.println("NO MORE RESOURCES");
 
 	    response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value()); // 429
 	    response.addHeader("X-Rate-Limit-Retry-After-Milliseconds",

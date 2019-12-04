@@ -1,26 +1,49 @@
 package com.example.main.backend;
 
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 
+@Repository
 public class DBHandler {
-
-	public void computeTfIdf(Connection a_conn) throws SQLException {
-		PreparedStatement query = a_conn.prepareStatement("CALL update_tf_idf_scores()");
-		query.execute();
+	
+	@Autowired
+	public DataSource dataSource;
+	
+	public Connection getConnection() throws SQLException{
+		
+		return dataSource.getConnection();
 	}
 
-	public SearchResultResponse searchConjunctiveQuery(Connection a_conn, String query, int a_k, SearchResultResponse a_response) throws SQLException {
+	public void computeTfIdf() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL update_tf_idf_scores()");
+		query.execute();
+		con.close();
+	}
+
+	public SearchResultResponse searchConjunctiveQuery( String query, int a_k, SearchResultResponse a_response) throws SQLException {
 		
+		Connection con = getConnection();
 		List<String> searchTerms = getTermsInQuotes(query);
 		String[] searchTermsArr = getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
-		PreparedStatement sql = a_conn.prepareStatement("SELECT * from conjunctive_search(?, ?)");
-		sql.setArray(1,  a_conn.createArrayOf("text", searchTermsArr));
+		PreparedStatement sql = con.prepareStatement("SELECT * from conjunctive_search(?, ?)");
+		sql.setArray(1,  con.createArrayOf("text", searchTermsArr));
 		sql.setInt(2, a_k);
 		sql.execute();
 		ResultSet results = sql.getResultSet();
@@ -32,10 +55,14 @@ public class DBHandler {
 			float score = results.getFloat(2);
 			a_response.addSearchResultItem(rank++, url, score);
 		}
+		results.close();
+		con.close();
 		return a_response;
 	}
 
-	public SearchResultResponse searchDisjunctiveQuery(Connection a_conn, String query, int a_k, SearchResultResponse a_response) throws SQLException {
+	public SearchResultResponse searchDisjunctiveQuery( String query, int a_k, SearchResultResponse a_response) throws SQLException {
+		
+		Connection con = getConnection();
 		
 		List<String> searchTerms = new ArrayList<String>();
 		for(String subQuery : getTermsInQuotes("\"" + query + "\"")) {
@@ -52,9 +79,9 @@ public class DBHandler {
 		List<String> requiredTerms = getTermsInQuotes(query);
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
 		
-		PreparedStatement sql = a_conn.prepareStatement("SELECT * from disjunctive_search(?,?,?)");
-		sql.setArray(1, a_conn.createArrayOf("text", searchTermsArr));
-		sql.setArray(2, a_conn.createArrayOf("text", requiredTermsArr));
+		PreparedStatement sql = con.prepareStatement("SELECT * from disjunctive_search(?,?,?)");
+		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
+		sql.setArray(2, con.createArrayOf("text", requiredTermsArr));
 		sql.setInt(3, a_k);
 		sql.execute();
 		ResultSet results = sql.getResultSet();
@@ -66,11 +93,15 @@ public class DBHandler {
 			float score = results.getFloat(2);
 			a_response.addSearchResultItem(rank++, url, score);
 		}
+		results.close();
+		con.close();
 		return a_response;
 	}
 	
 	
-	public SearchResultResponse getStats(Connection a_conn, String query, SearchResultResponse a_response) throws SQLException {
+	public SearchResultResponse getStats( String query, SearchResultResponse a_response) throws SQLException {
+		
+		Connection con = getConnection();
 		
 		List<String> terms = new ArrayList<String>();
 		for(String subQuery : getTermsInQuotes("\"" + query + "\"")) {
@@ -87,8 +118,8 @@ public class DBHandler {
 		
 		String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
 		
-		PreparedStatement sql = a_conn.prepareStatement("SELECT * from get_term_frequencies(?)");
-		sql.setArray(1, a_conn.createArrayOf("text", termsArr));
+		PreparedStatement sql = con.prepareStatement("SELECT * from get_term_frequencies(?)");
+		sql.setArray(1, con.createArrayOf("text", termsArr));
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		
@@ -100,21 +131,26 @@ public class DBHandler {
 			int df = results.getInt(2);
 			a_response.addStat(df, term);
 		}
-		
+		results.close();
+		con.close();
 		return a_response;
 	}
 	
 	
-	public int getCollectionSize(Connection a_conn) throws SQLException {
-		PreparedStatement sql = a_conn.prepareStatement("SELECT COUNT(docid) from documents");
+	public int getCollectionSize() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement sql = con.prepareStatement("SELECT COUNT(docid) from documents");
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		results.next();
-		return results.getInt(1);
+		int retVal = results.getInt(1);
+		results.close();
+		con.close();
+		return retVal;
 	}
 
 	
-	private List<String> getTermsInQuotes(String query) {
+	public List<String> getTermsInQuotes(String query) {
 		
 		List<String> terms = new ArrayList<String>();
 		Pattern pattern = Pattern.compile("\"([^\"]*)\"");
@@ -126,6 +162,259 @@ public class DBHandler {
 		}
 		
 		return terms;	
+	}
+	
+	
+	/**
+	 * Save current state of the crawler into the database
+	 */
+	public void cancel(int maximumDepth, int maximumNumberOfDocs, int crawledDocuments, boolean leaveDomain, int parallelism) {
+	
+		Connection con = null;
+		try {
+			
+			con = getConnection();
+			PreparedStatement clearCrawlerState = con.prepareStatement("TRUNCATE TABLE crawlerState RESTART IDENTITY");
+			clearCrawlerState.execute();
+			clearCrawlerState.close();
+
+			PreparedStatement ps = con.prepareStatement(
+					"INSERT INTO crawlerState (maximum_depth, maximum_docs, crawled_docs, leave_domain, parallelism) VALUES (?,?,?,?,?)");
+			ps.setInt(1, maximumDepth);
+			ps.setInt(2, maximumNumberOfDocs);
+			ps.setInt(3, crawledDocuments);
+			ps.setBoolean(4, leaveDomain);
+			ps.setInt(5, parallelism);
+
+			ps.executeUpdate();
+			ps.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}finally {
+			if(con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}
+	}
+
+	/**
+	 * Gets the next URL from the database
+	 * 
+	 * @return null if there are no more URLs in the database, otherwise the URL and
+	 *         the depth of that URL in the hierarchy
+	 * @throws SQLException
+	 * @throws URISyntaxException
+	 */
+	public Object[] getNextURL() throws SQLException, URISyntaxException {
+		Connection con = null;
+		try {
+			con = getConnection();
+			PreparedStatement stmtNextURL = con.prepareStatement("SELECT * FROM crawlerQueue ORDER BY id FETCH FIRST ROW ONLY");
+			stmtNextURL.execute();
+			ResultSet res = stmtNextURL.getResultSet();
+			if (res.next()) {
+				PreparedStatement stmnt = con.prepareStatement("DELETE FROM crawlerQueue WHERE id = ?");
+				stmnt.setInt(1, res.getInt(1));
+				stmnt.execute();
+				stmnt.close();
+				try {
+					return new Object[] { new URL(res.getString(2)), res.getInt(3) };
+				} catch (MalformedURLException e) {
+					return null;
+				}
+			}
+		}
+		catch(SQLException ex){
+			ex.printStackTrace();
+		}
+		finally {
+			if(con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}
+		return null;
+
+	}
+
+	/**
+	 * Inserts the provided URLs into the database if they are not already listed
+	 * 
+	 * @param urls URLs to insert
+	 * @param con  Connection to the database
+	 * @throws SQLException
+	 * @throws MalformedURLException
+	 */
+	public void queueURLs(Set<URL> urls) throws SQLException, MalformedURLException {
+		
+		Connection con = null;
+		try {
+			con = getConnection();
+			PreparedStatement stmtCheckIfExists = con
+					.prepareStatement("SELECT count(url) FROM documents WHERE url LIKE ? GROUP BY url" + "	UNION "
+							+ "SELECT count(url) FROM crawlerQueue WHERE url LIKE ? GROUP BY url");
+	
+			// Check if URL is already crawled. If so --> don't process it further
+			// Reduces the number of accesses to a single domain
+	
+			Set<URL> urlsAlreadyCrawled = new HashSet<URL>();
+			for (URL url : urls) {
+				stmtCheckIfExists.setString(1, url.toString());
+				stmtCheckIfExists.setString(2, url.toString());
+	
+				stmtCheckIfExists.execute();
+				ResultSet s = stmtCheckIfExists.getResultSet();
+				while (s.next()) {
+					if (s.getInt(1) > 0) {
+						urlsAlreadyCrawled.add(url);
+					}
+				}
+			}
+	
+			for (URL url : urlsAlreadyCrawled) {
+				urls.remove(url);
+			}
+	
+			PreparedStatement stmtQueueURLs = con
+					.prepareStatement("INSERT INTO crawlerQueue(id, url, current_depth) VALUES (DEFAULT, ?, ?)");
+	
+			for (URL url : urls) {
+				stmtQueueURLs.setString(1, url.toString());
+				stmtQueueURLs.setInt(2, 0);
+				stmtQueueURLs.addBatch();
+			}
+	
+			stmtQueueURLs.executeBatch();
+	
+			// If conflict on unique constraint url occurs --> ignore conflict and do
+			// nothing
+			PreparedStatement stmt = con.prepareStatement(
+					"INSERT INTO documents (docid, url,crawled_on_date, language) VALUES (DEFAULT,?,NULL,NULL) ON CONFLICT DO NOTHING");
+	
+			for (URL url : urls) {
+				stmt.setString(1, url.toString());
+				stmt.addBatch();
+			}
+	
+			stmt.executeBatch();
+		}
+		catch(SQLException ex) {
+			ex.printStackTrace();
+		}
+		finally {
+			if(con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}
+	}
+	
+	public void insertDocDataToDatabase(HTMLDocument doc, Connection con) throws SQLException, MalformedURLException {
+		
+		PreparedStatement stmtUpdateDoc = con
+				.prepareStatement("UPDATE documents SET crawled_on_date = CURRENT_DATE, language = ? WHERE url LIKE ?");
+		stmtUpdateDoc.setString(1, doc.getLanguage());
+		stmtUpdateDoc.setString(2, doc.getUrl().toString());
+		stmtUpdateDoc.executeUpdate();
+
+		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
+		stmtgetDocId.setString(1, doc.getUrl().toString());
+		stmtgetDocId.execute();
+		ResultSet key = stmtgetDocId.getResultSet();
+		if (key.next()) {
+			int docId = key.getInt(1);
+
+			// Insert features of document
+			PreparedStatement stmtInsertFeature = con
+					.prepareStatement("INSERT INTO features (docid, term, term_frequency) VALUES (?,?,?)");
+			for (Entry<String, Integer> e : doc.getTermFrequencies().entrySet()) {
+				stmtInsertFeature.setInt(1, docId);
+				stmtInsertFeature.setString(2, e.getKey());
+				stmtInsertFeature.setInt(3, e.getValue());
+				stmtInsertFeature.addBatch();
+			}
+			stmtInsertFeature.executeBatch();
+			stmtInsertFeature.close();
+
+			// Insert blank documents
+			PreparedStatement stmtInsertBlankDocument = con.prepareStatement(
+					"INSERT INTO documents (docid, url, crawled_on_date, language) VALUES (DEFAULT, ?, NULL, NULL) ON CONFLICT DO NOTHING");
+			for (URL url : doc.getLinks()) {
+				stmtInsertBlankDocument.setString(1, url.toString());
+				stmtInsertBlankDocument.addBatch();
+			}
+			stmtInsertBlankDocument.executeBatch();
+
+			List<Integer> docKeys = new ArrayList<>();
+			PreparedStatement stmtDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
+
+			for (URL url : doc.getLinks()) {
+				stmtDocId.setString(1, url.toString());
+				stmtDocId.execute();
+				ResultSet set = stmtDocId.getResultSet();
+				if (set.next()) {
+					docKeys.add(set.getInt(1));
+				}
+			}
+
+			// Insert outgoing links
+			PreparedStatement stmtInsertLinks = con
+					.prepareStatement("INSERT INTO links(from_docid, to_docid) VALUES (?,?)");
+			for (int toDoc : docKeys) {
+				stmtInsertLinks.setInt(1, docId);
+				stmtInsertLinks.setInt(2, toDoc);
+				stmtInsertLinks.addBatch();
+			}
+			stmtInsertLinks.executeBatch();
+			stmtInsertBlankDocument.close();
+			stmtInsertLinks.close();
+		}
+
+		stmtUpdateDoc.close();
+	}
+
+	public void insertURLToVisited(URL url, Connection con) throws SQLException, MalformedURLException {
+		PreparedStatement stmt = con
+				.prepareStatement("INSERT INTO crawlerVisitedPages (url, last_visited) VALUES (?, CURRENT_DATE)");
+		stmt.setString(1, url.toString());
+		stmt.execute();
+		stmt.close();
+	}
+
+	public void insertURLSToQueue(Set<URL> urls, int currentDepth, Connection con) throws SQLException {
+
+		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT count(docid) FROM documents WHERE url LIKE ? AND crawled_on_date = NULL");
+
+		PreparedStatement stmt = con.prepareStatement("INSERT INTO crawlerQueue (url, current_depth) VALUES (?,?)");
+		System.out.println();
+		for (URL url : urls) {
+			stmtgetDocId.setString(1, url.toString());
+			stmtgetDocId.execute();
+			ResultSet s = stmtgetDocId.getResultSet();
+			s.next();
+			System.out.println(s.getInt(1));
+			if (s.getInt(1) == 0) {
+				stmt.setString(1, url.toString());
+				stmt.setInt(2, currentDepth);
+				stmt.addBatch();
+			}
+
+		}
+		stmt.executeBatch();
+		stmt.close();
 	}
 	
 }

@@ -14,10 +14,12 @@ import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
+import org.la4j.matrix.SparseMatrix;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
+import com.example.main.backend.pagerank.PageRank;
 
 @Repository
 public class DBHandler {
@@ -497,5 +499,67 @@ public class DBHandler {
 		stmtExists.close();
 		con.close();
 		return firstStartup;
+	}
+
+	public void computePageRank(double randomJumpProbability, double terminationCriteria) throws SQLException {
+		// TODO: Extend database schema
+		Connection con = this.getConnection();
+		con.setAutoCommit(false);
+		// PreparedStatement outgoingEdges = con.prepareStatement("SELECT from_docid,
+		// to_docid FROM links");
+		PreparedStatement edges = con.prepareStatement(
+				"SELECT d1.docid, d2.docid, (SELECT EXISTS (SELECT 1 FROM links WHERE from_docid = d1.docid AND to_docid = d2.docid)), (SELECT count(to_docid) FROM links WHERE from_docid = d1.docid) FROM documents d1, documents d2 ORDER BY d1.docid, d2.docid");
+		PreparedStatement docCount = con.prepareStatement("SELECT count(docid) FROM documents");
+
+		// Build matrix
+		docCount.execute();
+		ResultSet countResult = docCount.getResultSet();
+		countResult.next();
+		int vertices = countResult.getInt(1);
+		countResult.close();
+		docCount.close();
+
+		// Matrix initialized with zeros
+		System.out.println(vertices);
+		SparseMatrix tm = SparseMatrix.zero(vertices, vertices);
+
+		edges.execute();
+		System.out.println("EXECUTED THAT BIG THING");
+		ResultSet r = edges.getResultSet();
+		int row = -1;
+		int column = -1;
+		int lastDocRow = -1;
+		int lastDocColumn = -1;
+		while (r.next()) {
+			int docRow = r.getInt(1);
+			int docColumn = r.getInt(2);
+			boolean edgeExists = r.getBoolean(3);
+			int outDegree = r.getInt(4);
+			
+			if(docRow > lastDocRow) {
+				row++;
+			}
+			if(docColumn > lastDocColumn) {
+				column++;
+			}
+			
+			if (edgeExists) {
+				tm.set(row, column, ((double) 1) / outDegree);
+			}else if(outDegree == 0) {
+				tm.set(row, column, ((double) 1) / vertices);
+			}
+			System.out.println("NEXT "+ row +" " + column);
+		}
+		r.close();
+		edges.close();
+		con.commit();
+		con.close();
+
+		// Transition matrix is ready --> now compute
+		PageRank pr = new PageRank.Builder().withRandomJumpProability(0.1).withTerminationCriteria(0.001)
+				.withTransitionMatrix(tm).build();
+
+		// pr.getStationaryDistribution();
+		System.out.println("PageRank computed");
 	}
 }

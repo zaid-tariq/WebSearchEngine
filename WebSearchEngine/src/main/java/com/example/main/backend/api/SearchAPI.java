@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import com.example.main.backend.DBHandler;
 import com.example.main.backend.DatabaseCreator;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
+import com.example.main.backend.pagerank.PageRank;
 
 @Component
 public class SearchAPI {
@@ -117,7 +118,10 @@ public class SearchAPI {
 
 	public void updateScores() {
 		try {
+			db.computePageRank(0.1,0.001);
+			System.out.println("HALLO?");
 			db.computeTfIdf();
+			System.out.println("HERE");
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		} catch (Exception ex) {

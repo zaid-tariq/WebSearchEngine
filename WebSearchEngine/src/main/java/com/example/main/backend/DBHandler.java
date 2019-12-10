@@ -11,14 +11,11 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.sql.DataSource;
-
 import org.la4j.matrix.SparseMatrix;
 import org.la4j.vector.DenseVector;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
-
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.pagerank.PageRank;
 
@@ -32,9 +29,11 @@ public class DBHandler {
 		return dataSource.getConnection();
 	}
 
-	public void computeTfIdf() throws SQLException {
+	public void updateScores() throws SQLException {
 		Connection con = getConnection();
-		PreparedStatement query = con.prepareStatement("CALL update_tf_idf_scores()");
+		PreparedStatement query = con.prepareStatement("CALL update_scores(?,?)");
+		query.setFloat(1, (float) 1.2);
+		query.setFloat(2, (float) 0.75);
 		query.execute();
 		con.close();
 	}

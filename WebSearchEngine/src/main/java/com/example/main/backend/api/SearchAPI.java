@@ -120,8 +120,9 @@ public class SearchAPI {
 		try {
 			db.computePageRank(0.1,0.001);
 			System.out.println("HALLO?");
-			db.computeTfIdf();
+			db.updateScores();
 			System.out.println("HERE");
+
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		} catch (Exception ex) {

@@ -22,8 +22,9 @@ public class DatabaseCreator {
 			// CREATE TABLE IF NOT EXISTS s by DDL statements
 			createDocumentsTable(connection);
 			createFeatureTable(connection);
+			createViewsOnFeaturesTable(connection);
 			createLinksTable(connection);
-			createProcedureToTfIdfUpdate(connection);
+			createUpdateScoresunction(connection);
 			createFunctionConjunctive_search(connection);
 			createFunctionDisjunctive_search(connection);
 			createStatsFunction(connection);
@@ -55,7 +56,7 @@ public class DatabaseCreator {
 
 	private void createDocumentsTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
-				"CREATE TABLE IF NOT EXISTS documents (docid SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE , crawled_on_date DATE, language TEXT, page_rank DOUBLE)");
+				"CREATE TABLE IF NOT EXISTS documents (docid SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE , crawled_on_date DATE, language TEXT, page_rank DOUBLE, num_of_terms int)");
 		statement.execute();
 		statement.close();
 	}
@@ -174,4 +175,92 @@ public class DatabaseCreator {
 		statement.execute(query);
 		statement.close();
 	}
+	
+	private void createUpdateScoresunction(Connection con) throws SQLException {
+		String query = 
+		"CREATE OR REPLACE PROCEDURE update_scores(k real, b real) " + 
+		"LANGUAGE 'plpgsql' " + 
+		"AS $$ " + 
+		"BEGIN " + 
+		"WITH " + 
+		"  doc_freq AS(" + 
+		"      SELECT term," + 
+		"      COUNT(DISTINCT docid) AS doc_count_of_term" + 
+		"      FROM features" + 
+		"      GROUP BY term" + 
+		"  )," + 
+		"    " + 
+		"  docs_stats AS(" + 
+		"      SELECT COUNT(docid) AS total_docs, AVG(num_of_terms) as avg_num_of_terms" + 
+		"      FROM documents" + 
+		"  )," + 
+		"  idf_scores_tfidf AS(" + 
+		"      SELECT f.term," + 
+		"          LOG(1.0 * docs_stats.total_docs / doc_freq.doc_count_of_term) AS idf_score" + 
+		"      FROM features f," + 
+		"          doc_freq," + 
+		"          docs_stats" + 
+		"      WHERE f.term = doc_freq.term " + 
+		"  )," + 
+		"  idf_scores_okapi AS(" + 
+		"      SELECT f.term," + 
+		"              LOG((docs_stats.total_docs - doc_freq.doc_count_of_term + 0.5)/(doc_freq.doc_count_of_term + 0.5)) AS idf_score" + 
+		"      FROM features f," + 
+		"            doc_freq," + 
+		"            docs_stats" + 
+		"      WHERE f.term = doc_freq.term " + 
+		"  )," + 
+		"  term_scores AS (" + 
+		"      SELECT" + 
+		"             f.term," + 
+		"             d.docid," + 
+		"             (  " + 
+		"              idf_scores_okapi.idf_score * (" + 
+		"                              				 f.term_frequency * ($1 + 1) / (" + 
+		"                                                                       			f.term_frequency + ( $1 * (" + 
+		"                                                                                                      			1-$2+($2 * d.num_of_terms/docs_stats.avg_num_of_terms)" + 
+		"                                                                                                          	)" + 
+		"                                                                                          			) " + 
+		"                                                                      			 )" + 
+		"                              				)" + 
+		"              ) AS score_okapi," + 
+		"              (" + 
+		"				  idf_scores_tfidf.idf_score * (1.0 + LOG(f.term_frequency))" + 
+		"			  ) AS score_tf_idf" + 
+		"      FROM" + 
+		"          features f," + 
+		"          documents d," + 
+		"          idf_scores_tfidf," + 
+		"          idf_scores_okapi," + 
+		"          docs_stats" + 
+		"      WHERE f.term = idf_scores_tfidf.term" + 
+		"	  		AND f.term = idf_scores_okapi.term" + 
+		"            AND f.docid = d.docid" + 
+		"    )" + 
+		"UPDATE features f " + 
+		"SET score_tfidf = term_scores.score_tf_idf, " + 
+		"    score_okapi = term_scores.score_okapi " + 
+		"FROM term_scores " + 
+		"WHERE f.term = term_scores.term AND f.docid = term_scores.docid; " + 
+		"END; $$;";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	private void createViewsOnFeaturesTable(Connection con) throws SQLException {
+		
+		String query = "CREATE OR REPLACE VIEW features_tfidf AS" + 
+				"	SELECT docid, term, score_tfidf AS score" + 
+				"	FROM features; " + 
+				"" + 
+				"CREATE OR REPLACE VIEW features_bm25 AS" + 
+				"	SELECT docid, term, score_okapi AS score" + 
+				"	FROM features;";
+		
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
 }

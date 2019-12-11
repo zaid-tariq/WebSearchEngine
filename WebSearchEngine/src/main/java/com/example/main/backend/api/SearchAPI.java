@@ -1,16 +1,13 @@
 package com.example.main.backend.api;
 
 import java.net.URL;
-import java.sql.Connection;
 import java.sql.SQLException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.example.main.backend.DBHandler;
-import com.example.main.backend.DatabaseCreator;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
-import com.example.main.backend.pagerank.PageRank;
 
 @Component
 public class SearchAPI {

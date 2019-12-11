@@ -5,9 +5,13 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,8 +19,10 @@ import javax.sql.DataSource;
 import org.la4j.matrix.SparseMatrix;
 import org.la4j.vector.DenseVector;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
+import com.example.main.backend.dao.DBResponseDocument;
 import com.example.main.backend.pagerank.PageRank;
 
 @Repository
@@ -24,6 +30,12 @@ public class DBHandler {
 
 	@Autowired
 	public DataSource dataSource;
+	
+	@Value("${bm25.k}")
+	String bm25_k;
+	
+	@Value("${bm25.b}")
+	String bm25_b;
 
 	public Connection getConnection() throws SQLException {
 		return dataSource.getConnection();
@@ -32,8 +44,8 @@ public class DBHandler {
 	public void updateScores() throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("CALL update_scores(?,?)");
-		query.setFloat(1, (float) 1.2);
-		query.setFloat(2, (float) 0.75);
+		query.setFloat(1, Float.parseFloat(bm25_k)); 
+		query.setFloat(2, Float.parseFloat(bm25_k)); 
 		query.execute();
 		con.close();
 	}
@@ -44,22 +56,12 @@ public class DBHandler {
 		Connection con = getConnection();
 		List<String> searchTerms = getTermsInQuotes(query);
 		String[] searchTermsArr = getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
-		PreparedStatement sql = con.prepareStatement("SELECT * from conjunctive_search(?, ?)");
+		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_conjunctive_search(?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
-		sql.setInt(2, a_k);
+//		sql.setInt(2, a_k);
 		sql.execute();
 		ResultSet results = sql.getResultSet();
-		if (a_response == null)
-			a_response = new SearchResultResponse();
-		int rank = 1;
-		while (results.next()) {
-			String url = results.getString(1);
-			float score = results.getFloat(2);
-			a_response.addSearchResultItem(rank++, url, score);
-		}
-		results.close();
-		con.close();
-		return a_response;
+		return processSearchQueryResultSet(con, results, searchTerms, a_response); //closes connection too
 	}
 
 	public SearchResultResponse searchDisjunctiveQuery(String query, int a_k, SearchResultResponse a_response)
@@ -82,22 +84,53 @@ public class DBHandler {
 		List<String> requiredTerms = getTermsInQuotes(query);
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
 
-		PreparedStatement sql = con.prepareStatement("SELECT * from disjunctive_search(?,?,?)");
+		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
 		sql.setArray(2, con.createArrayOf("text", requiredTermsArr));
-		sql.setInt(3, a_k);
+//		sql.setInt(3, a_k); apply  Limit it in Java now.
 		sql.execute();
 		ResultSet results = sql.getResultSet();
-		if (a_response == null)
-			a_response = new SearchResultResponse();
-		int rank = 1;
+		searchTerms.addAll(requiredTerms); //combine all terms
+		return processSearchQueryResultSet(con, results, searchTerms, a_response); //closes connection too
+	}
+	
+	private SearchResultResponse processSearchQueryResultSet(Connection con, ResultSet results, List<String> searchTerms, SearchResultResponse a_response) throws SQLException {
+		
+		HashMap<String, DBResponseDocument> resDocs = new HashMap<String, DBResponseDocument>();
+		
 		while (results.next()) {
-			String url = results.getString(1);
-			float score = results.getFloat(2);
-			a_response.addSearchResultItem(rank++, url, score);
+			String url = results.getString(2);
+			String term = results.getString(3);
+			float score_tfidf = results.getFloat(4);
+			float score_okapi = results.getFloat(5);
+			if(!resDocs.containsKey(url)) 
+				resDocs.put(url, new DBResponseDocument(url));				
+			DBResponseDocument doc = resDocs.get(url);
+			doc.add_term(term, score_tfidf, score_okapi);
 		}
 		results.close();
 		con.close();
+		
+		DBResponseDocument queryDoc = new DBResponseDocument(null);
+		
+		for(String t: searchTerms) 
+			queryDoc.add_term(t, 1, 1);
+		
+		ArrayList<DBResponseDocument> sortedSet = new ArrayList<DBResponseDocument>();
+		for(String key: resDocs.keySet()) {
+			DBResponseDocument doc = resDocs.get(key);
+			double similarityScore = queryDoc.getCosineSimilarity_tfIdf(doc);
+			doc.cosSim = similarityScore;
+			sortedSet.add(doc);
+		}
+		
+		Collections.sort(sortedSet, (d1, d2) -> Double.compare(d1.cosSim, d2.cosSim) );
+		
+		int rank = 1;
+		if (a_response == null)
+			a_response = new SearchResultResponse();
+		for(DBResponseDocument resDoc : sortedSet)
+			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.cosSim);
 		return a_response;
 	}
 
@@ -152,13 +185,16 @@ public class DBHandler {
 
 	public List<String> getTermsInQuotes(String query) {
 
+		Stemmer stemmer = new Stemmer();
 		List<String> terms = new ArrayList<String>();
 		Pattern pattern = Pattern.compile("\"([^\"]*)\"");
 		Matcher matcher = pattern.matcher(query);
 		while (matcher.find()) {
 			String term = matcher.group(1);
-			terms.add(term);
-			System.out.println(term);
+			stemmer.add(term.toCharArray(), term.length());
+			stemmer.stem();
+			String stemmedTerm = stemmer.toString();
+			terms.add(stemmedTerm);
 		}
 
 		return terms;
@@ -345,6 +381,12 @@ public class DBHandler {
 			}
 			stmtInsertFeature.executeBatch();
 			stmtInsertFeature.close();
+			
+			PreparedStatement setNumberOfTerms = con
+					.prepareStatement("UPDATE documents SET num_of_terms = ? WHERE docid = ?");
+			setNumberOfTerms.setInt(1, doc.getTermFrequencies().entrySet().size());
+			setNumberOfTerms.setInt(2, docId);
+			setNumberOfTerms.executeUpdate();
 
 			// Insert blank documents
 			PreparedStatement stmtInsertBlankDocument = con.prepareStatement(
@@ -520,9 +562,8 @@ public class DBHandler {
 		docCount.close();
 
 		// Matrix initialized with zeros
-		System.out.println(vertices);
+		System.out.println("vertices "+vertices);
 		SparseMatrix tm = SparseMatrix.zero(vertices, vertices);
-
 		edges.execute();
 		System.out.println("EXECUTED THAT BIG THING");
 		ResultSet r = edges.getResultSet();

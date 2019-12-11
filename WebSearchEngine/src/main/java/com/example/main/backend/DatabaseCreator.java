@@ -3,11 +3,9 @@ package com.example.main.backend;
 import java.sql.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Component;
 
 @Component
-@PropertySource(value = { "classpath:application.properties" }, ignoreResourceNotFound = false)
 public class DatabaseCreator {
 
 	@Autowired
@@ -47,9 +45,81 @@ public class DatabaseCreator {
 		}
 	}
 
+	private void createFunctionConjunctive_search(Connection connection) throws SQLException {
+		String query = 
+		"CREATE OR REPLACE FUNCTION get_docs_for_conjunctive_search(search_terms text[])"
+		+ "    	RETURNS TABLE(docurl text, term text, tfidf real, okapi real)" 
+		+ "    	LANGUAGE 'plpgsql'"
+		+ "		AS $$"
+				+ " BEGIN" + 
+				" 		 CREATE TEMP TABLE search_terms_table(term text);				" + 
+				" 		 INSERT INTO search_terms_table SELECT unnest(search_terms); 		" + 
+				" 		 RETURN QUERY" + 
+				" 		 				WITH" + 
+				"		 					filtered_docs AS(						" + 
+				"		 						SELECT f1.docid						" + 
+				"		 						FROM features f1						" + 
+				"		 						GROUP BY f1.docid						" + 
+				"		 						HAVING NOT EXISTS(						" + 
+				"		 							SELECT * FROM search_terms_table 						" + 
+				"		 							EXCEPT SELECT unnest(array_agg(f1.term))				" + 
+				"		 							)					" + 
+				"		 						)				" + 
+				" 		 				SELECT d.url, f.term, f.score_tfidf, f.score_okapi" + 
+				" 		 				from features f, filtered_docs fd, documents d				" + 
+				" 		 				WHERE 	f.docid = fd.docid 						" + 
+				" 		 				AND f.docid = d.docid			" + 
+				" 		 				ORDER BY d.docid;	" + 
+				" 		 END; $$;";
+		Statement statement = connection.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	
+
+	private void createFunctionDisjunctive_search(Connection connection) throws SQLException {
+		String query = 
+				"CREATE OR REPLACE FUNCTION get_docs_for_disjunctive_search(search_terms text[], required_terms text[])"
+				+ "    	RETURNS TABLE(docurl text, term text, tfidf real, okapi real)" 
+				+ "    	LANGUAGE 'plpgsql'"
+				+ "		AS $$" +
+						" BEGIN" + 
+						"	CREATE TEMP TABLE search_terms_table(term text);		" + 
+						"	INSERT INTO search_terms_table SELECT unnest(search_terms); " + 
+						"	CREATE TEMP TABLE required_terms_table(term text);		" + 
+						"	INSERT INTO required_terms_table SELECT unnest(required_terms); " + 
+						"	RETURN QUERY" + 
+						"			WITH" + 
+						" 			filtered_docs_keywords AS(" + 
+						" 							SELECT f1.docid				" + 
+						" 							FROM features f1				" + 
+						" 							GROUP BY f1.docid 				" + 
+						" 							HAVING " + 
+						" 								NOT EXISTS(					" + 
+						"	 								SELECT * FROM required_terms_table 					" + 
+						"	 								EXCEPT SELECT unnest(array_agg(f1.term))				" + 
+						"	 								)" + 
+						"	 							AND EXISTS(					" + 
+						"		 							(SELECT * FROM search_terms_table UNION SELECT * FROM required_terms_table) 						" + 
+						"		 							INTERSECT " + 
+						"		 							SELECT unnest(array_agg(f1.term))" + 
+						"		 						)			" + 
+						" 							)					" + 
+						" 						SELECT d.url, f.term, f.score_tfidf, f.score_okapi" + 
+						" 		 				from features f, filtered_docs fd, documents d				" + 
+						" 		 				WHERE 	f.docid = fd.docid 						" + 
+						" 		 				AND f.docid = d.docid			" + 
+						" 		 				ORDER BY d.docid;	" + 
+						" END; $$;";
+				Statement statement = connection.createStatement();
+				statement.execute(query);
+				statement.close();
+	}
+
 	private void createFeatureTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
-				"CREATE TABLE IF NOT EXISTS features (docid INT REFERENCES documents(docid), term TEXT, term_frequency INT, tf_idf FLOAT)");
+				"CREATE TABLE IF NOT EXISTS features (docid INT REFERENCES documents(docid), term TEXT, term_frequency INT, score_tfidf real, score_okapi real, idf_tfidf real, idf_okapi real, df int )");
 		statement.execute();
 		statement.close();
 	}
@@ -99,6 +169,7 @@ public class DatabaseCreator {
 		statement.close();
 	}
 
+	@SuppressWarnings("unused")
 	private void createProcedureToTfIdfUpdate(Connection con) throws SQLException {
 		String query = "CREATE OR REPLACE PROCEDURE update_tf_idf_scores() " + " LANGUAGE 'sql' "
 				+ " AS $procedure$	CREATE TABLE features_temp AS" + "		WITH " + "			doc_freq AS ("
@@ -117,7 +188,7 @@ public class DatabaseCreator {
 		statement.execute(query);
 		statement.close();
 	}
-
+/*
 	private void createFunctionConjunctive_search(Connection con) throws SQLException {
 		String query = "		CREATE OR REPLACE FUNCTION conjunctive_search(" + "				IN search_terms text[],"
 				+ "				IN top_k integer" + "			)"
@@ -160,7 +231,7 @@ public class DatabaseCreator {
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();
-	}
+	}*/
 
 	private void createStatsFunction(Connection con) throws SQLException {
 		String query = "CREATE OR REPLACE FUNCTION get_term_frequencies(" + "    search_terms text[]" + ")"
@@ -239,9 +310,13 @@ public class DatabaseCreator {
 		"    )" + 
 		"UPDATE features f " + 
 		"SET score_tfidf = term_scores.score_tf_idf, " + 
-		"    score_okapi = term_scores.score_okapi " + 
-		"FROM term_scores " + 
-		"WHERE f.term = term_scores.term AND f.docid = term_scores.docid; " + 
+		"    score_okapi = term_scores.score_okapi, " +
+		"	 idf_tfidf = idf_scores_tfidf.idf_score, "+
+		"	 idf_okapi = idf_scores_okapi.idf_score,"+
+		"	 df = doc_freq.doc_count_of_term " +
+		"FROM term_scores, idf_scores_okapi, idf_scores_tfidf, doc_freq " + 
+		"WHERE f.term = term_scores.term AND f.docid = term_scores.docid AND f.term=idf_scores_okapi.term AND f.term=idf_scores_tfidf.term AND f.term=doc_freq.term; " +
+		" "+
 		"END; $$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);
@@ -262,5 +337,6 @@ public class DatabaseCreator {
 		statement.execute(query);
 		statement.close();
 	}
+	
 	
 }

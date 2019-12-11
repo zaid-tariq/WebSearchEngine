@@ -1,5 +1,7 @@
 package com.example.main.backend.pagerank;
 
+import org.la4j.Vector;
+import org.la4j.Vectors;
 import org.la4j.matrix.SparseMatrix;
 import org.la4j.vector.DenseVector;
 
@@ -41,6 +43,8 @@ public class PageRank {
 				.multiply(transitionMatrix));
 		DenseVector v = DenseVector.constant(p.rows(), ((double) 1) / p.rows());
 		DenseVector b = DenseVector.constant(p.rows(), Double.POSITIVE_INFINITY);
+		Vector a = null;
+		
 		while (v.subtract(b).sum() >= terminationCriteria) {
 			b = v;
 			v = (DenseVector) v.multiply(transitionMatrix);

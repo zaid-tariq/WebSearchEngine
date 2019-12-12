@@ -1,7 +1,6 @@
 package com.example.main.backend.pagerank;
 
 import org.la4j.Vector;
-import org.la4j.Vectors;
 import org.la4j.matrix.SparseMatrix;
 import org.la4j.vector.DenseVector;
 

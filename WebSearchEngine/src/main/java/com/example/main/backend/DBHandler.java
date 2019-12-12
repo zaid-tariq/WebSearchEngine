@@ -10,8 +10,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,6 +22,7 @@ import org.springframework.stereotype.Repository;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.dao.DBResponseDocument;
 import com.example.main.backend.pagerank.PageRank;
+import com.example.main.backend.utils.Utils; 
 
 @Repository
 public class DBHandler {
@@ -54,8 +53,8 @@ public class DBHandler {
 			throws SQLException {
 
 		Connection con = getConnection();
-		List<String> searchTerms = getTermsInQuotes(query);
-		String[] searchTermsArr = getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
+		List<String> searchTerms = Utils.getTermsInQuotes(query);
+		String[] searchTermsArr = Utils.getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
 		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_conjunctive_search(?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
 //		sql.setInt(2, a_k);
@@ -69,19 +68,9 @@ public class DBHandler {
 
 		Connection con = getConnection();
 
-		List<String> searchTerms = new ArrayList<String>();
-		for (String subQuery : getTermsInQuotes("\"" + query + "\"")) {
-			for (String term : subQuery.split(" ")) {
-				term = term.trim();
-				if (term.length() > 0) {
-					searchTerms.add(term);
-					System.out.println(term);
-				}
-			}
-		}
-
+		List<String> searchTerms = Utils.getTermsWithoutQuotes(query);
 		String[] searchTermsArr = (String[]) searchTerms.toArray(new String[searchTerms.size()]);
-		List<String> requiredTerms = getTermsInQuotes(query);
+		List<String> requiredTerms = Utils.getTermsInQuotes(query);
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
 
 		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?)");
@@ -136,23 +125,11 @@ public class DBHandler {
 
 	public SearchResultResponse getStats(String query, SearchResultResponse a_response) throws SQLException {
 
-		Connection con = getConnection();
-
-		List<String> terms = new ArrayList<String>();
-		for (String subQuery : getTermsInQuotes("\"" + query + "\"")) {
-			for (String term : subQuery.split(" ")) {
-				term = term.trim();
-				if (term.length() > 0) {
-					terms.add(term);
-					System.out.println(term);
-				}
-			}
-		}
-
-		terms.addAll(getTermsInQuotes(query));
-
+		List<String> terms = Utils.getTermsWithoutQuotes(query);
+		terms.addAll(Utils.getTermsInQuotes(query));
 		String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
 
+		Connection con = getConnection();
 		PreparedStatement sql = con.prepareStatement("SELECT * from get_term_frequencies(?)");
 		sql.setArray(1, con.createArrayOf("text", termsArr));
 		sql.execute();
@@ -166,6 +143,7 @@ public class DBHandler {
 			int df = results.getInt(2);
 			a_response.addStat(df, term);
 		}
+		
 		results.close();
 		con.close();
 		return a_response;
@@ -181,23 +159,6 @@ public class DBHandler {
 		results.close();
 		con.close();
 		return retVal;
-	}
-
-	public List<String> getTermsInQuotes(String query) {
-
-		Stemmer stemmer = new Stemmer();
-		List<String> terms = new ArrayList<String>();
-		Pattern pattern = Pattern.compile("\"([^\"]*)\"");
-		Matcher matcher = pattern.matcher(query);
-		while (matcher.find()) {
-			String term = matcher.group(1);
-			stemmer.add(term.toCharArray(), term.length());
-			stemmer.stem();
-			String stemmedTerm = stemmer.toString();
-			terms.add(stemmedTerm);
-		}
-
-		return terms;
 	}
 
 	/**

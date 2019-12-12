@@ -24,6 +24,12 @@
 	        	</div>
 	        </div>
 		<div class="container">
+				<form action="results" method="get">
+					<input style="display:none" type="text" name="query" value="${didYouMean}">
+					<i>
+						Did you mean: <input class="btn btn-link" type="submit" value="${didYouMean}">  ?
+		            </i>
+		        </form>
 				<c:choose>
 				<c:when test="${fn:length(results)==0}">
 				       	<h2 class="text-center">Oops... no results found!</h2>

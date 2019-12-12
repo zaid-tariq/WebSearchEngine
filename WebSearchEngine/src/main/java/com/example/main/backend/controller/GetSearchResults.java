@@ -1,14 +1,17 @@
 package com.example.main.backend.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.example.main.backend.api.SearchAPI;
-import com.example.main.backend.api.responseObjects.SearchResultResponse;
 
 @Controller
 public class GetSearchResults {
+	
+	@Autowired
+	SearchAPI api;
 
 	@RequestMapping("/")
 	public String helloWorld(Model model) {
@@ -19,8 +22,8 @@ public class GetSearchResults {
 	public String results(Model model, @RequestParam(value = "query") String query,
 			@RequestParam(value = "limit", defaultValue = "20") int limit) {
 		
-		SearchResultResponse results = new SearchAPI().searchAPIdisjunctive(query, limit);
-		model.addAttribute("results", results.resultList);
+		model.addAttribute("results", api.searchAPIdisjunctive(query, limit).resultList);
+		model.addAttribute("didYouMean", api.getDidYouMeanQuery(query));
 		return "results";
 	}
 }

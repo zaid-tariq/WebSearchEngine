@@ -18,6 +18,8 @@ public class DatabaseCreator {
 			connection = db.getConnection();
 
 			// CREATE TABLE IF NOT EXISTS s by DDL statements
+			createExtensionLevenshtein(connection);
+			createExtensionTrigram(connection);
 			createDocumentsTable(connection);
 			createFeatureTable(connection);
 			createViewsOnFeaturesTable(connection);
@@ -27,6 +29,8 @@ public class DatabaseCreator {
 			createFunctionDisjunctive_search(connection);
 			createStatsFunction(connection);
 			createIndices(connection);
+			create_function_get_related_terms_to_less_frequent_terms(connection);
+			create_alternate_query_scorer_function(connection);
 
 			createCrawlerStateTable(connection);
 			createCrawlerQueueTable(connection);
@@ -43,6 +47,21 @@ public class DatabaseCreator {
 				}
 			}
 		}
+	}
+	
+	
+	private void createExtensionLevenshtein(Connection connection) throws SQLException {
+		String query = "CREATE EXTENSION IF NOT EXISTS fuzzystrmatch";
+		Statement statement = connection.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	private void createExtensionTrigram(Connection connection) throws SQLException {
+		String query = "CREATE EXTENSION IF NOT EXISTS pg_trgm2";
+		Statement statement = connection.createStatement();
+		statement.execute(query);
+		statement.close();
 	}
 
 	private void createFunctionConjunctive_search(Connection connection) throws SQLException {
@@ -107,7 +126,7 @@ public class DatabaseCreator {
 						"		 						)			" + 
 						" 							)					" + 
 						" 						SELECT d.url, f.term, f.score_tfidf, f.score_okapi" + 
-						" 		 				from features f, filtered_docs fd, documents d				" + 
+						" 		 				from features f, filtered_docs_keywords fd, documents d				" + 
 						" 		 				WHERE 	f.docid = fd.docid 						" + 
 						" 		 				AND f.docid = d.docid			" + 
 						" 		 				ORDER BY d.docid;	" + 
@@ -168,8 +187,7 @@ public class DatabaseCreator {
 		statement.execute(query);
 		statement.close();
 	}
-
-	@SuppressWarnings("unused")
+/*
 	private void createProcedureToTfIdfUpdate(Connection con) throws SQLException {
 		String query = "CREATE OR REPLACE PROCEDURE update_tf_idf_scores() " + " LANGUAGE 'sql' "
 				+ " AS $procedure$	CREATE TABLE features_temp AS" + "		WITH " + "			doc_freq AS ("
@@ -188,7 +206,7 @@ public class DatabaseCreator {
 		statement.execute(query);
 		statement.close();
 	}
-/*
+
 	private void createFunctionConjunctive_search(Connection con) throws SQLException {
 		String query = "		CREATE OR REPLACE FUNCTION conjunctive_search(" + "				IN search_terms text[],"
 				+ "				IN top_k integer" + "			)"
@@ -333,6 +351,71 @@ public class DatabaseCreator {
 				"	SELECT docid, term, score_okapi AS score" + 
 				"	FROM features;";
 		
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	private void create_function_get_related_terms_to_less_frequent_terms(Connection con) throws SQLException{
+		String query = 
+			"CREATE OR REPLACE FUNCTION get_related_terms_to_non_existant_or_rare_terms(search_terms text[], dist_thresh int, rarity_thresh int)" + 
+				"RETURNS TABLE(query_term text, related_term text, distance int)" + 
+				"LANGUAGE 'plpgsql' " + 
+				"AS " + 
+				"$$ " + 
+				"BEGIN " + 
+				"	CREATE TEMP TABLE search_terms_table(term text);" + 
+				"	INSERT INTO search_terms_table SELECT unnest(search_terms);" + 
+				"	RETURN QUERY " + 
+				"		WITH " + 
+				"			query_terms AS (" + 
+				"				SELECT DISTINCT f.term --rare query term" + 
+				"				FROM features f, search_terms_table st" + 
+				"				WHERE f.term = st.term AND f.df <= rarity_thresh" + 
+				"				UNION" + 
+				"				SELECT st.term --also add query terms that do not exist in DB" + 
+				"				FROM search_terms_table st" + 
+				"				)," + 
+				"			collection_terms AS (" + 
+				"				SELECT f1.term FROM features f1 " + 
+				"				EXCEPT " + 
+				"				SELECT qt.term FROM query_terms qt" + 
+				"				)" + 
+				"	  SELECT qt.term, ct.term, levenshtein(qt.term, ct.term) AS dist" + 
+				"	  FROM query_terms qt, collection_terms ct " + 
+				"	  WHERE dist <= dist_thresh;" + 
+				"END; " + 
+				"$$;";
+		
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	private void create_alternate_query_scorer_function(Connection con) throws SQLException {
+		String query = 
+				"CREATE OR REPLACE FUNCTION get_df_scores_of_term_pairs(list_of_term_pairs text[]) " + 
+				"RETURNS TABLE(score int) " + 
+				"LANGUAGE 'plpgsql' " + 
+				"AS " + 
+				"$$ " + 
+				"BEGIN" + 
+				"  CREATE TEMP TABLE term_pairs_table(term1 text, term2 text);" + 
+				"  INSERT INTO term_pairs_table" + 
+				"              SELECT split_part(term_pair, ':', 1) as term1, split_part(term_pair, ':', 2) as term2" + 
+				"              FROM (SELECT unnest(list_of_term_pairs) as term_pair) tab;" + 
+				"  RETURN QUERY" + 
+				"    WITH" + 
+				"      inverted_index_doc_to_term AS (" + 
+				"          SELECT docid, array_agg(distinct term) as cont_docs" + 
+				"          FROM features" + 
+				"          GROUP BY docid" + 
+				"      )" + 
+				"      SELECT  COUNT(docid)" + 
+				"      FROM inverted_index_doc_to_term iitd, term_pairs_table pairs" + 
+				"      WHERE pairs.term1 IN (SELECT unnest(iitd.cont_docs) as term1)" + 
+				"            AND pairs.term2 IN (SELECT unnest(iitd.cont_docs) as term2); " + 
+				"END;$$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();

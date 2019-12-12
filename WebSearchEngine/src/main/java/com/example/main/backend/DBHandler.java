@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 import javax.sql.DataSource;
 
 import org.la4j.matrix.SparseMatrix;
+import org.la4j.vector.DenseVector;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -297,7 +298,7 @@ public class DBHandler {
 			// If conflict on unique constraint url occurs --> ignore conflict and do
 			// nothing
 			PreparedStatement stmt = con.prepareStatement(
-					"INSERT INTO documents (docid, url,crawled_on_date, language) VALUES (DEFAULT,?,NULL,NULL) ON CONFLICT DO NOTHING");
+					"INSERT INTO documents (docid, url,crawled_on_date, language, page_rank) VALUES (DEFAULT,?,NULL,NULL,NULL) ON CONFLICT DO NOTHING");
 
 			for (URL url : urls) {
 				stmt.setString(1, url.toString());
@@ -348,7 +349,7 @@ public class DBHandler {
 
 			// Insert blank documents
 			PreparedStatement stmtInsertBlankDocument = con.prepareStatement(
-					"INSERT INTO documents (docid, url, crawled_on_date, language) VALUES (DEFAULT, ?, NULL, NULL) ON CONFLICT DO NOTHING");
+					"INSERT INTO documents (docid, url, crawled_on_date, language, page_rank) VALUES (DEFAULT, ?, NULL, NULL, NULL) ON CONFLICT DO NOTHING");
 			for (URL url : doc.getLinks()) {
 				stmtInsertBlankDocument.setString(1, url.toString());
 				stmtInsertBlankDocument.addBatch();
@@ -530,36 +531,57 @@ public class DBHandler {
 		int column = -1;
 		int lastDocRow = -1;
 		int lastDocColumn = -1;
+		
+		ArrayList<Integer> docIds = new ArrayList<Integer>();
+		
 		while (r.next()) {
 			int docRow = r.getInt(1);
 			int docColumn = r.getInt(2);
 			boolean edgeExists = r.getBoolean(3);
 			int outDegree = r.getInt(4);
 			
-			if(docRow > lastDocRow) {
+			if (docRow > lastDocRow) {
+				//Ensures that every docId is only inserted once
+				//No need to sort them later, because the query sorts them
+				docIds.add(docRow);
 				row++;
 			}
-			if(docColumn > lastDocColumn) {
+			if (docColumn > lastDocColumn) {
 				column++;
 			}
-			
+
 			if (edgeExists) {
 				tm.set(row, column, ((double) 1) / outDegree);
-			}else if(outDegree == 0) {
+			} else if (outDegree == 0) {
 				tm.set(row, column, ((double) 1) / vertices);
 			}
-			System.out.println("NEXT "+ row +" " + column);
+			System.out.println("NEXT " + row + " " + column);
 		}
+		
 		r.close();
 		edges.close();
 		con.commit();
 		con.close();
-
+		
 		// Transition matrix is ready --> now compute
 		PageRank pr = new PageRank.Builder().withRandomJumpProability(0.1).withTerminationCriteria(0.001)
 				.withTransitionMatrix(tm).build();
 
-		// pr.getStationaryDistribution();
+		DenseVector pageRanks = pr.getStationaryDistribution();
+		for (int x = 0; x < pageRanks.length(); x++) {
+			this.setPageRank(docIds.get(x), pageRanks.get(x));
+		}
+		
 		System.out.println("PageRank computed");
+	}
+
+	public void setPageRank(int docId, double pagerank) throws SQLException {
+		Connection con = this.getConnection();
+		PreparedStatement stmt = con.prepareStatement("UPDATE documents SET page_rank = ? WHERE docid = ?");
+		stmt.setDouble(1, pagerank);
+		stmt.setInt(2, docId);
+		stmt.execute();
+		stmt.close();
+		con.close();
 	}
 }

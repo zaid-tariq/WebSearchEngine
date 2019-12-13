@@ -3,13 +3,18 @@ package com.example.main.backend.api;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.example.main.backend.DBHandler;
-import com.example.main.backend.DatabaseCreator;
+import com.example.main.backend.SpellChecker;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
+import com.example.main.backend.utils.Utils;
+
+import javafx.util.Pair;
 
 @Component
 public class SearchAPI {
@@ -117,11 +122,42 @@ public class SearchAPI {
 
 	public void updateScores() {
 		try {
-			db.computeTfIdf();
+			db.computePageRank(0.1,0.001);
+			System.out.println("HALLO?");
+			db.updateScores();
+			System.out.println("HERE");
+
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
+	}
+	
+	public String getDidYouMeanQuery(String query)  {
+		
+		String altQuery = null;
+		Connection con = null;
+		try {
+			List<String> terms = Utils.getTermsWithoutQuotes(query);
+			terms.addAll(Utils.getTermsInQuotes(query));
+			String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
+			con = db.getConnection();
+			SpellChecker spellChecker = new SpellChecker();
+			Map<String, List<Pair<String, Integer>>> relTerms = spellChecker.findRelatedTermsForLessFrequentTerms(termsArr, con);
+			altQuery = spellChecker.findBestAlternateQuery(terms, relTerms, con);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		finally {
+			if(con != null)
+				try {
+					con.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+		}
+		
+		return altQuery;
 	}
 }

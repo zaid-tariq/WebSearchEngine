@@ -5,33 +5,46 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.sql.DataSource;
-
+import org.la4j.matrix.SparseMatrix;
+import org.la4j.vector.DenseVector;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
-
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
+import com.example.main.backend.dao.DBResponseDocument;
+import com.example.main.backend.pagerank.PageRank;
+import com.example.main.backend.utils.Utils; 
 
 @Repository
 public class DBHandler {
 
 	@Autowired
 	public DataSource dataSource;
+	
+	@Value("${bm25.k}")
+	String bm25_k;
+	
+	@Value("${bm25.b}")
+	String bm25_b;
 
 	public Connection getConnection() throws SQLException {
 		return dataSource.getConnection();
 	}
 
-	public void computeTfIdf() throws SQLException {
+	public void updateScores() throws SQLException {
 		Connection con = getConnection();
-		PreparedStatement query = con.prepareStatement("CALL update_tf_idf_scores()");
+		PreparedStatement query = con.prepareStatement("CALL update_scores(?,?)");
+		query.setFloat(1, Float.parseFloat(bm25_k)); 
+		query.setFloat(2, Float.parseFloat(bm25_k)); 
 		query.execute();
 		con.close();
 	}
@@ -40,24 +53,14 @@ public class DBHandler {
 			throws SQLException {
 
 		Connection con = getConnection();
-		List<String> searchTerms = getTermsInQuotes(query);
-		String[] searchTermsArr = getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
-		PreparedStatement sql = con.prepareStatement("SELECT * from conjunctive_search(?, ?)");
+		List<String> searchTerms = Utils.getTermsInQuotes(query);
+		String[] searchTermsArr = Utils.getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
+		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_conjunctive_search(?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
-		sql.setInt(2, a_k);
+//		sql.setInt(2, a_k);
 		sql.execute();
 		ResultSet results = sql.getResultSet();
-		if (a_response == null)
-			a_response = new SearchResultResponse();
-		int rank = 1;
-		while (results.next()) {
-			String url = results.getString(1);
-			float score = results.getFloat(2);
-			a_response.addSearchResultItem(rank++, url, score);
-		}
-		results.close();
-		con.close();
-		return a_response;
+		return processSearchQueryResultSet(con, results, searchTerms, a_response); //closes connection too
 	}
 
 	public SearchResultResponse searchDisjunctiveQuery(String query, int a_k, SearchResultResponse a_response)
@@ -65,59 +68,68 @@ public class DBHandler {
 
 		Connection con = getConnection();
 
-		List<String> searchTerms = new ArrayList<String>();
-		for (String subQuery : getTermsInQuotes("\"" + query + "\"")) {
-			for (String term : subQuery.split(" ")) {
-				term = term.trim();
-				if (term.length() > 0) {
-					searchTerms.add(term);
-					System.out.println(term);
-				}
-			}
-		}
-
+		List<String> searchTerms = Utils.getTermsWithoutQuotes(query);
 		String[] searchTermsArr = (String[]) searchTerms.toArray(new String[searchTerms.size()]);
-		List<String> requiredTerms = getTermsInQuotes(query);
+		List<String> requiredTerms = Utils.getTermsInQuotes(query);
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
 
-		PreparedStatement sql = con.prepareStatement("SELECT * from disjunctive_search(?,?,?)");
+		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
 		sql.setArray(2, con.createArrayOf("text", requiredTermsArr));
-		sql.setInt(3, a_k);
+//		sql.setInt(3, a_k); apply  Limit it in Java now.
 		sql.execute();
 		ResultSet results = sql.getResultSet();
-		if (a_response == null)
-			a_response = new SearchResultResponse();
-		int rank = 1;
+		searchTerms.addAll(requiredTerms); //combine all terms
+		return processSearchQueryResultSet(con, results, searchTerms, a_response); //closes connection too
+	}
+	
+	private SearchResultResponse processSearchQueryResultSet(Connection con, ResultSet results, List<String> searchTerms, SearchResultResponse a_response) throws SQLException {
+		
+		HashMap<String, DBResponseDocument> resDocs = new HashMap<String, DBResponseDocument>();
+		
 		while (results.next()) {
-			String url = results.getString(1);
-			float score = results.getFloat(2);
-			a_response.addSearchResultItem(rank++, url, score);
+			String url = results.getString(2);
+			String term = results.getString(3);
+			float score_tfidf = results.getFloat(4);
+			float score_okapi = results.getFloat(5);
+			if(!resDocs.containsKey(url)) 
+				resDocs.put(url, new DBResponseDocument(url));				
+			DBResponseDocument doc = resDocs.get(url);
+			doc.add_term(term, score_tfidf, score_okapi);
 		}
 		results.close();
 		con.close();
+		
+		DBResponseDocument queryDoc = new DBResponseDocument(null);
+		
+		for(String t: searchTerms) 
+			queryDoc.add_term(t, 1, 1);
+		
+		ArrayList<DBResponseDocument> sortedSet = new ArrayList<DBResponseDocument>();
+		for(String key: resDocs.keySet()) {
+			DBResponseDocument doc = resDocs.get(key);
+			double similarityScore = queryDoc.getCosineSimilarity_tfIdf(doc);
+			doc.cosSim = similarityScore;
+			sortedSet.add(doc);
+		}
+		
+		Collections.sort(sortedSet, (d1, d2) -> Double.compare(d1.cosSim, d2.cosSim) );
+		
+		int rank = 1;
+		if (a_response == null)
+			a_response = new SearchResultResponse();
+		for(DBResponseDocument resDoc : sortedSet)
+			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.cosSim);
 		return a_response;
 	}
 
 	public SearchResultResponse getStats(String query, SearchResultResponse a_response) throws SQLException {
 
-		Connection con = getConnection();
-
-		List<String> terms = new ArrayList<String>();
-		for (String subQuery : getTermsInQuotes("\"" + query + "\"")) {
-			for (String term : subQuery.split(" ")) {
-				term = term.trim();
-				if (term.length() > 0) {
-					terms.add(term);
-					System.out.println(term);
-				}
-			}
-		}
-
-		terms.addAll(getTermsInQuotes(query));
-
+		List<String> terms = Utils.getTermsWithoutQuotes(query);
+		terms.addAll(Utils.getTermsInQuotes(query));
 		String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
 
+		Connection con = getConnection();
 		PreparedStatement sql = con.prepareStatement("SELECT * from get_term_frequencies(?)");
 		sql.setArray(1, con.createArrayOf("text", termsArr));
 		sql.execute();
@@ -131,6 +143,7 @@ public class DBHandler {
 			int df = results.getInt(2);
 			a_response.addStat(df, term);
 		}
+		
 		results.close();
 		con.close();
 		return a_response;
@@ -146,20 +159,6 @@ public class DBHandler {
 		results.close();
 		con.close();
 		return retVal;
-	}
-
-	public List<String> getTermsInQuotes(String query) {
-
-		List<String> terms = new ArrayList<String>();
-		Pattern pattern = Pattern.compile("\"([^\"]*)\"");
-		Matcher matcher = pattern.matcher(query);
-		while (matcher.find()) {
-			String term = matcher.group(1);
-			terms.add(term);
-			System.out.println(term);
-		}
-
-		return terms;
 	}
 
 	/**
@@ -295,7 +294,7 @@ public class DBHandler {
 			// If conflict on unique constraint url occurs --> ignore conflict and do
 			// nothing
 			PreparedStatement stmt = con.prepareStatement(
-					"INSERT INTO documents (docid, url,crawled_on_date, language) VALUES (DEFAULT,?,NULL,NULL) ON CONFLICT DO NOTHING");
+					"INSERT INTO documents (docid, url,crawled_on_date, language, page_rank) VALUES (DEFAULT,?,NULL,NULL,NULL) ON CONFLICT DO NOTHING");
 
 			for (URL url : urls) {
 				stmt.setString(1, url.toString());
@@ -343,10 +342,16 @@ public class DBHandler {
 			}
 			stmtInsertFeature.executeBatch();
 			stmtInsertFeature.close();
+			
+			PreparedStatement setNumberOfTerms = con
+					.prepareStatement("UPDATE documents SET num_of_terms = ? WHERE docid = ?");
+			setNumberOfTerms.setInt(1, doc.getTermFrequencies().entrySet().size());
+			setNumberOfTerms.setInt(2, docId);
+			setNumberOfTerms.executeUpdate();
 
 			// Insert blank documents
 			PreparedStatement stmtInsertBlankDocument = con.prepareStatement(
-					"INSERT INTO documents (docid, url, crawled_on_date, language) VALUES (DEFAULT, ?, NULL, NULL) ON CONFLICT DO NOTHING");
+					"INSERT INTO documents (docid, url, crawled_on_date, language, page_rank) VALUES (DEFAULT, ?, NULL, NULL, NULL) ON CONFLICT DO NOTHING");
 			for (URL url : doc.getLinks()) {
 				stmtInsertBlankDocument.setString(1, url.toString());
 				stmtInsertBlankDocument.addBatch();
@@ -497,5 +502,87 @@ public class DBHandler {
 		stmtExists.close();
 		con.close();
 		return firstStartup;
+	}
+
+	public void computePageRank(double randomJumpProbability, double terminationCriteria) throws SQLException {
+		// TODO: Extend database schema
+		Connection con = this.getConnection();
+		con.setAutoCommit(false);
+		// PreparedStatement outgoingEdges = con.prepareStatement("SELECT from_docid,
+		// to_docid FROM links");
+		PreparedStatement edges = con.prepareStatement(
+				"SELECT d1.docid, d2.docid, (SELECT EXISTS (SELECT 1 FROM links WHERE from_docid = d1.docid AND to_docid = d2.docid)), (SELECT count(to_docid) FROM links WHERE from_docid = d1.docid) FROM documents d1, documents d2 ORDER BY d1.docid, d2.docid");
+		PreparedStatement docCount = con.prepareStatement("SELECT count(docid) FROM documents");
+
+		// Build matrix
+		docCount.execute();
+		ResultSet countResult = docCount.getResultSet();
+		countResult.next();
+		int vertices = countResult.getInt(1);
+		countResult.close();
+		docCount.close();
+
+		// Matrix initialized with zeros
+		System.out.println("vertices "+vertices);
+		SparseMatrix tm = SparseMatrix.zero(vertices, vertices);
+		edges.execute();
+		System.out.println("EXECUTED THAT BIG THING");
+		ResultSet r = edges.getResultSet();
+		int row = -1;
+		int column = -1;
+		int lastDocRow = -1;
+		int lastDocColumn = -1;
+		
+		ArrayList<Integer> docIds = new ArrayList<Integer>();
+		
+		while (r.next()) {
+			int docRow = r.getInt(1);
+			int docColumn = r.getInt(2);
+			boolean edgeExists = r.getBoolean(3);
+			int outDegree = r.getInt(4);
+			
+			if (docRow > lastDocRow) {
+				//Ensures that every docId is only inserted once
+				//No need to sort them later, because the query sorts them
+				docIds.add(docRow);
+				row++;
+			}
+			if (docColumn > lastDocColumn) {
+				column++;
+			}
+
+			if (edgeExists) {
+				tm.set(row, column, ((double) 1) / outDegree);
+			} else if (outDegree == 0) {
+				tm.set(row, column, ((double) 1) / vertices);
+			}
+			System.out.println("NEXT " + row + " " + column);
+		}
+		
+		r.close();
+		edges.close();
+		con.commit();
+		con.close();
+		
+		// Transition matrix is ready --> now compute
+		PageRank pr = new PageRank.Builder().withRandomJumpProability(0.1).withTerminationCriteria(0.001)
+				.withTransitionMatrix(tm).build();
+
+		DenseVector pageRanks = pr.getStationaryDistribution();
+		for (int x = 0; x < pageRanks.length(); x++) {
+			this.setPageRank(docIds.get(x), pageRanks.get(x));
+		}
+		
+		System.out.println("PageRank computed");
+	}
+
+	public void setPageRank(int docId, double pagerank) throws SQLException {
+		Connection con = this.getConnection();
+		PreparedStatement stmt = con.prepareStatement("UPDATE documents SET page_rank = ? WHERE docid = ?");
+		stmt.setDouble(1, pagerank);
+		stmt.setInt(2, docId);
+		stmt.execute();
+		stmt.close();
+		con.close();
 	}
 }

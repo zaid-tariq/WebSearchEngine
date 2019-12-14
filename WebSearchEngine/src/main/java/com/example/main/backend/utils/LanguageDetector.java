@@ -1,7 +1,14 @@
 package com.example.main.backend.utils;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+
+import org.springframework.core.io.ClassPathResource;
 
 import com.example.main.backend.HTMLDocument;
 import com.example.main.backend.HTMLDocument.Language;
@@ -20,8 +27,12 @@ public class LanguageDetector {
 	private int wordCountEnglish = 0;
 
 	public LanguageDetector() {
-		germanWordCounts = loadWordCounts(Language.GERMAN);
-		englishWordCounts = loadWordCounts(Language.ENGLISH);
+		try {
+			germanWordCounts = loadWordCounts(Language.GERMAN);
+			englishWordCounts = loadWordCounts(Language.ENGLISH);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
 		for (String key : germanWordCounts.keySet()) {
 			wordCountGerman += germanWordCounts.get(key);
@@ -56,17 +67,46 @@ public class LanguageDetector {
 	 * 
 	 * @param lang Language constant provided by {@link HTMLDocument.Language}
 	 * @return Word counts
+	 * @throws IOException 
 	 */
-	private HashMap<String, Integer> loadWordCounts(String lang) {
+	private HashMap<String, Integer> loadWordCounts(String lang) throws IOException {
 		if (lang.equals(Language.ENGLISH)) {
-			return null;
+			HashMap<String, Integer> m = new HashMap<String, Integer>();
+			File file = null;
+			try {
+				file = new ClassPathResource("english_counts.txt").getFile();
+			} catch (FileNotFoundException ex) {
+				ex.printStackTrace();
+			}
+			BufferedReader r = new BufferedReader(new FileReader(file));
+			String line;
+			while ((line = r.readLine()) != null) {
+				String[] split = line.split(" ");
+				m.put(split[0], Integer.parseInt(split[1]));
+			}
+			r.close();
+			return m;
 		} else if (lang.equals(Language.GERMAN)) {
-			return null;
+			HashMap<String, Integer> m = new HashMap<String, Integer>();
+			File file = null;
+			try {
+				file = new ClassPathResource("german_counts.txt").getFile();
+			} catch (FileNotFoundException ex) {
+				ex.printStackTrace();
+			}
+			BufferedReader r = new BufferedReader(new FileReader(file));
+			String line;
+			while ((line = r.readLine()) != null) {
+				String[] split = line.split(" ");
+				m.put(split[0], Integer.parseInt(split[1]));
+			}
+			r.close();
+			return m;
 		} else {
 			throw new IllegalArgumentException("Language not supported");
 		}
 	}
-
+	
 	/**
 	 * Returns the probability for that specific term
 	 * 

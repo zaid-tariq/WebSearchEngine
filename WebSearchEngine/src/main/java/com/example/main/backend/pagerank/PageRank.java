@@ -3,10 +3,13 @@ package com.example.main.backend.pagerank;
 import org.la4j.Vector;
 import org.la4j.matrix.SparseMatrix;
 import org.la4j.vector.DenseVector;
+import org.la4j.vector.SparseVector;
+import org.la4j.vector.functor.VectorPredicate;
+import org.la4j.vector.sparse.CompressedVector;
 
 public class PageRank {
 
-	private DenseVector stationaryDistribution;
+	private Vector stationaryDistribution;
 	private SparseMatrix transitionMatrix;
 	private double terminationCriteria;
 	private double randomJumpProbability;
@@ -19,7 +22,7 @@ public class PageRank {
 				terminationCriteria);
 	}
 
-	public DenseVector getStationaryDistribution() {
+	public Vector getStationaryDistribution() {
 		return stationaryDistribution;
 	}
 
@@ -35,18 +38,17 @@ public class PageRank {
 		return randomJumpProbability;
 	}
 
-	private DenseVector computeWithPowerIterationMethod(SparseMatrix transitionMatrix, double randomJumpProbability,
+	private Vector computeWithPowerIterationMethod(SparseMatrix transitionMatrix, double randomJumpProbability,
 			double terminationCriteria) {
 		SparseMatrix p = (SparseMatrix) transitionMatrix.multiply(1 - randomJumpProbability).add(SparseMatrix
 				.constant(transitionMatrix.rows(), transitionMatrix.columns(), ((double) 1) / transitionMatrix.rows())
 				.multiply(transitionMatrix));
-		DenseVector v = DenseVector.constant(p.rows(), ((double) 1) / p.rows());
-		DenseVector b = DenseVector.constant(p.rows(), Double.POSITIVE_INFINITY);
-		Vector a = null;
-		
+		Vector v = SparseVector.constant(p.rows(), ((double) 1) / p.rows());
+		Vector b = SparseVector.constant(p.rows(), Double.MIN_VALUE);
+
 		while (v.subtract(b).sum() >= terminationCriteria) {
 			b = v;
-			v = (DenseVector) v.multiply(transitionMatrix);
+			v = v.multiply(transitionMatrix);
 		}
 		return v;
 	}

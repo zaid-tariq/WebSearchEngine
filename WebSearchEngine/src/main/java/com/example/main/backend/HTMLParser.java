@@ -10,7 +10,6 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,6 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.core.io.ClassPathResource;
 
+import com.example.main.backend.utils.LanguageDetector;
 import com.example.main.backend.utils.Utils;
 import com.shekhargulati.urlcleaner.UrlExtractor;
 
@@ -68,9 +68,22 @@ public class HTMLParser {
 		}
 
 		// 1. parse file for meta data e.g. language
+		// If the language is set then use that otherwise use the language detector
 		Matcher mLanguage = Pattern.compile("<html[^>]*lang=\"(.*?)\"[^>]*>").matcher(content);
 		if (mLanguage.find()) {
-			doc.setLanguage(mLanguage.group(1));
+			// Language is set in the HTML document language tag
+			String proposedLanguage = mLanguage.group(1).toLowerCase().replaceAll("-[a-z]*", "");
+			switch (proposedLanguage) {
+			case "en":
+				doc.setLanguage(HTMLDocument.Language.ENGLISH);
+				break;
+			case "de":
+				doc.setLanguage(HTMLDocument.Language.GERMAN);
+				break;
+			default:
+				// Just for completeness if we ever change the default value
+				doc.setLanguage(null);
+			}
 		}
 
 		// 2. parse the file for links
@@ -90,15 +103,6 @@ public class HTMLParser {
 		}
 
 		// 3. remove all tags
-
-		// That was not good, because we had a lot of unwanted content
-
-		// Matcher mTags = Pattern.compile("<[^>]*>").matcher(content);
-		// content = mTags.replaceAll(" "); // by empty string to split the content
-
-		/**
-		 * NEW PARSING
-		 */
 		LinkedList<String> extractedContent = new LinkedList<String>();
 		String specialChars = "(\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|&#39;|\\.|\\,|\\:|\\;|\\[|\\]|\\{|\\}|\\||\\+|\\-|\\*|\\)|\\(|\\=|\\\"|\\|'|'|&|…|#|_)";
 		for (String word : content.replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
@@ -106,66 +110,41 @@ public class HTMLParser {
 				extractedContent.add(word);
 			}
 		}
-		/**
-		 * OLD PARSING
-		 */
-//		Pattern rm = Pattern.compile("<[^>]*>");
-//
-//		LinkedList<String> extractedContent = new LinkedList<String>();
-//
-//		String specialChars = "(\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|\\.|\\,|\\:|\\;)";
-//
-//		Matcher hTags = Pattern.compile("<h\\d[^>]*>(.+?)</h\\d>").matcher(content);
-//		while (hTags.find()) {
-//			for (String word : hTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-//				if (!word.trim().equals("")) {
-//					extractedContent.add(word);
-//				}
-//			}
-//		}
-//
-//		Matcher aTags = Pattern.compile("<a[^>]*>(.+?)</a>").matcher(content);
-//		while (aTags.find()) {
-//			for (String word : aTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-//				if (!word.trim().equals("")) {
-//					extractedContent.add(word);
-//				}
-//			}
-//		}
-//
-//		Matcher pTags = Pattern.compile("<p[^>]*>(.+?)</p>").matcher(content);
-//		while (pTags.find()) {
-//			for (String word : pTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
-//				if (!word.trim().equals("")) {
-//					extractedContent.add(word);
-//				}
-//			}
-//		}
-//
-//		Matcher spanTags = Pattern.compile("<span[^>]*>(.+?)</span>").matcher(content);
-//		while (spanTags.find()) {
-//			for (String word : spanTags.group(1).replaceAll("<[^>]*>", " ").replaceAll(specialChars, "")
-//					.split("\\s+")) {
-//				if (!word.trim().equals("")) {
-//					extractedContent.add(word);
-//				}
-//			}
-//		}
+
+		// Language was not detected by language tag in first step
+		if (doc.getLanguage() == null) {
+			int tuningParameterWordsToConsider = 100;
+			LanguageDetector detector = new LanguageDetector();
+			List<String> wordsToConsider = extractedContent.subList(0,
+					tuningParameterWordsToConsider < extractedContent.size() ? tuningParameterWordsToConsider - 1
+							: extractedContent.size() - 1);
+			doc.setLanguage(detector.detect(wordsToConsider));
+		}
 
 		// 4. remove all stopwords, stemming and term frequency calculation at the same
 		// time for efficiency
+		// no stemming for german documents
 		String processedContent = "";
 		Stemmer stemmer = new Stemmer();
-		Queue<String> words = extractedContent; // old: Arrays.asList(content.split(" "))
-		while (!words.isEmpty()) {
-			String word = words.remove().toLowerCase();
-			if (!stopwords.contains(word)) {
-				// Keep on process else drop
-				stemmer.add(word.toCharArray(), word.length());
-				stemmer.stem();
-				String stemmedWord = stemmer.toString();
-				doc.incrementTermFrequency(stemmedWord);
-				processedContent += stemmedWord;
+		Queue<String> words = extractedContent;
+
+		if (doc.getLanguage().equals(HTMLDocument.Language.ENGLISH)) {
+			while (!words.isEmpty()) {
+				String word = words.remove().toLowerCase();
+				if (!stopwords.contains(word)) {
+					// Keep on process else drop
+					stemmer.add(word.toCharArray(), word.length());
+					stemmer.stem();
+					String stemmedWord = stemmer.toString();
+					doc.incrementTermFrequency(stemmedWord);
+					processedContent += stemmedWord;
+				}
+			}
+		} else {
+			while (!words.isEmpty()) {
+				String word = words.remove().toLowerCase();
+				doc.incrementTermFrequency(word);
+				processedContent += word;
 			}
 		}
 

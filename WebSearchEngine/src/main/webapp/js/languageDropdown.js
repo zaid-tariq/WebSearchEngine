@@ -5,5 +5,6 @@ $(document).ready(function() {
 		$('.active').toggleClass('active');
 		$('.dropdown-toggle').html($(this).html());
 		$(this).toggleClass('active');
+		$('#inputLanguage').val($(this).html().toLowerCase());
 	});
 });

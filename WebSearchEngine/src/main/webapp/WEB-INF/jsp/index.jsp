@@ -28,12 +28,15 @@
         <div class="card col-5" style="background-color:transparent;border:none">
             <div class="card-body text-center">
             	<div class="row mb-4">
-            		<img class="col-6 offset-3" src="images/TUgle.png" alt="TUgle">
+            		<a href="/" class="col-6 offset-3">
+            			<img style="width:inherit;height:auto" src="images/TUgle.png" alt="TUgle">
+            		</a>
             	</div>                
             	<form action="results" method="get">
                     <div class="form-group">
                         <input class="form-control" type="text" name="query">
                     </div>
+                    <input type="hidden" id="inputLanguage" name="lang" value="english">
                     <input type="submit" class="btn btn-primary" value="Suchen">
                 </form>
             </div>

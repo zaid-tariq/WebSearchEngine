@@ -32,7 +32,7 @@
 	                    	<div class="form-group">
 	                        	<input class="form-control" type="text" name="query">
 	                    	</div>
-	                    	<input type="hidden" id="inputLanguage" name="lang" value="english">
+	                    	<input type="hidden" class="inputLanguage" name="lang" value="english">
 	                    	<input type="submit" class="btn btn-primary" style="background-color:#006A99;border-color:#047699" value="Suchen">
 	               	 	</form>
 	            	</div>
@@ -44,6 +44,7 @@
 					<c:if test="${not empty didYouMean}">
 						<i>
 							Did you mean: <input class="btn btn-link" type="submit" value="${didYouMean}">  ?
+							<input type="hidden" class="inputLanguage" name="lang" value="english">
 		            	</i>
 					</c:if>
 		        </form>

@@ -51,22 +51,22 @@ public class DBHandler {
 		con.close();
 	}
 
-	public SearchResultResponse searchConjunctiveQuery(String query, int a_k, SearchResultResponse a_response)
-			throws SQLException {
+	public SearchResultResponse searchConjunctiveQuery(String query, int a_k, String[] languages,
+			SearchResultResponse a_response) throws SQLException {
 
 		Connection con = getConnection();
 		List<String> searchTerms = Utils.getTermsInQuotes(query);
 		String[] searchTermsArr = Utils.getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
-		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_conjunctive_search(?)");
+		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_conjunctive_search(?,?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
-//		sql.setInt(2, a_k);
+		sql.setArray(2, con.createArrayOf("text", languages));
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		return processSearchQueryResultSet(con, results, searchTerms, a_response); // closes connection too
 	}
 
-	public SearchResultResponse searchDisjunctiveQuery(String query, int a_k, SearchResultResponse a_response)
-			throws SQLException {
+	public SearchResultResponse searchDisjunctiveQuery(String query, int a_k, String[] languages,
+			SearchResultResponse a_response) throws SQLException {
 
 		Connection con = getConnection();
 
@@ -75,10 +75,10 @@ public class DBHandler {
 		List<String> requiredTerms = Utils.getTermsInQuotes(query);
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
 
-		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?)");
+		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?,?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
 		sql.setArray(2, con.createArrayOf("text", requiredTermsArr));
-//		sql.setInt(3, a_k); apply  Limit it in Java now.
+		sql.setArray(3, con.createArrayOf("text", languages));
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		searchTerms.addAll(requiredTerms); // combine all terms
@@ -91,10 +91,10 @@ public class DBHandler {
 		HashMap<String, DBResponseDocument> resDocs = new HashMap<String, DBResponseDocument>();
 
 		while (results.next()) {
-			String url = results.getString(2);
-			String term = results.getString(3);
-			float score_tfidf = results.getFloat(4);
-			float score_okapi = results.getFloat(5);
+			String url = results.getString(1);
+			String term = results.getString(2);
+			float score_tfidf = results.getFloat(3);
+			float score_okapi = results.getFloat(4);
 			if (!resDocs.containsKey(url))
 				resDocs.put(url, new DBResponseDocument(url));
 			DBResponseDocument doc = resDocs.get(url);
@@ -552,7 +552,7 @@ public class DBHandler {
 			if (docColumn < lastDocColumn) {
 				lastDocColumn = -1;
 				column = 0;
-			}else if (docColumn > lastDocColumn) {
+			} else if (docColumn > lastDocColumn) {
 				lastDocColumn = docColumn;
 				column++;
 			}

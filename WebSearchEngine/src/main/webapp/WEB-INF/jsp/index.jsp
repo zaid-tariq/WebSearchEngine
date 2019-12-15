@@ -11,7 +11,19 @@
     <link rel="icon" href="img/favicon.ico"/>
 </head>
 <body class="h-100">
-<div class="container-fluid h-100">
+<div class="container-fluid h-100 position-relative">
+	<div class="position-absolute" style="top:1em;right:1em">
+		<div class="btn-group dropleft">
+		  	<button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+		    	English
+		  	</button>
+		  	<div class="dropdown-menu">
+		    	<a class="dropdown-item active" href="#">English</a>
+  				<a class="dropdown-item" href="#">German</a>
+  				<a class="dropdown-item" href="#">No matter</a>
+		  	</div>
+		</div>
+	</div>
     <div class="row justify-content-center align-items-center h-75">
         <div class="card col-5" style="background-color:transparent;border:none">
             <div class="card-body text-center">
@@ -22,7 +34,7 @@
                     <div class="form-group">
                         <input class="form-control" type="text" name="query">
                     </div>
-                    <input type="submit" class="btn btn-primary" style="background-color:#006A99;border-color:#047699" value="Suchen">
+                    <input type="submit" class="btn btn-primary" value="Suchen">
                 </form>
             </div>
         </div>
@@ -34,6 +46,7 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
             integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
             crossorigin="anonymous"></script>
+    <script src="js/languageDropdown.js"></script>
 </div>
 </body>
 </html>

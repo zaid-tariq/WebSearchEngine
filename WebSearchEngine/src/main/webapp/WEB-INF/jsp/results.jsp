@@ -7,8 +7,20 @@
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
    		 <link rel="stylesheet" href="css/style.css">
 	</head>
-	<body>
-		<div class="row justify-content-center align-items-center">
+	<body class="position-relative">
+		<div class="position-absolute" style="top:1em;right:1em">
+			<div class="btn-group dropleft">
+			  	<button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+			    	English
+			  	</button>
+			  	<div class="dropdown-menu">
+			    	<a class="dropdown-item active" href="#">English</a>
+	  				<a class="dropdown-item" href="#">German</a>
+	  				<a class="dropdown-item" href="#">No matter</a>
+			  	</div>
+			</div>
+		</div>
+		<div class="row justify-content-center align-items-center pt-5">
 	        	<div class="card col-5" style="background-color:transparent;border:none">
 	            	<div class="card-body text-center">
 	            		<div class="row mb-4">
@@ -26,9 +38,11 @@
 		<div class="container">
 				<form action="results" method="get">
 					<input style="display:none" type="text" name="query" value="${didYouMean}">
-					<i>
-						Did you mean: <input class="btn btn-link" type="submit" value="${didYouMean}">  ?
-		            </i>
+					<c:if test="${not empty didYouMean}">
+						<i>
+							Did you mean: <input class="btn btn-link" type="submit" value="${didYouMean}">  ?
+		            	</i>
+					</c:if>
 		        </form>
 				<c:choose>
 				<c:when test="${fn:length(results)==0}">
@@ -56,5 +70,6 @@
 	            integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
 	            crossorigin="anonymous"></script>
 	    <script src="js/results.js"></script>
+	    <script src="js/languageDropdown.js"></script>
 	</body>
 </html>

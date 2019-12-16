@@ -5,6 +5,11 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 
 public class HTMLDocument {
+	
+	public static class Language {
+		public static final String GERMAN = "german";
+		public static final String ENGLISH = "english";
+	}
 
 	private URL url;
 	private LinkedHashSet<URL> links = new LinkedHashSet<>();

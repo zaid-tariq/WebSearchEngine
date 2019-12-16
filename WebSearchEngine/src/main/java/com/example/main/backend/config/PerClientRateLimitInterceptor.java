@@ -24,26 +24,26 @@ public class PerClientRateLimitInterceptor implements HandlerInterceptor {
 	  @Override
 	  public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
 	      Object handler) throws Exception {
+
+		if(request.getAttribute("query")!= null) {
+			 String clientIP = getClientIP(request);
+			    Bucket requestBucket = this.buckets.computeIfAbsent(clientIP, key -> standardBucket());
+
+			    ConsumptionProbe probe = requestBucket.tryConsumeAndReturnRemaining(1);
+			    if (probe.isConsumed()) {
+			      response.addHeader("X-Rate-Limit-Remaining",
+			          Long.toString(probe.getRemainingTokens()));
+			      return true;
+			    }
+
+			    response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value()); // 429
+			    response.addHeader("X-Rate-Limit-Retry-After-Milliseconds",
+			    Long.toString(TimeUnit.NANOSECONDS.toMillis(probe.getNanosToWaitForRefill())));
+			    
+			    return false;
+		}
 		  
-		System.out.println("##### Request intercepted #####");
-
-	    String clientIP = getClientIP(request);
-	    System.out.println("IP:"+clientIP);
-	    Bucket requestBucket = this.buckets.computeIfAbsent(clientIP, key -> standardBucket());
-
-	    ConsumptionProbe probe = requestBucket.tryConsumeAndReturnRemaining(1);
-	    if (probe.isConsumed()) {
-	      response.addHeader("X-Rate-Limit-Remaining",
-	          Long.toString(probe.getRemainingTokens()));
-	      return true;
-	    }
-	    System.out.println("NO MORE RESOURCES");
-
-	    response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value()); // 429
-	    response.addHeader("X-Rate-Limit-Retry-After-Milliseconds",
-	        Long.toString(TimeUnit.NANOSECONDS.toMillis(probe.getNanosToWaitForRefill())));
-
-	    return false;
+		return true;
 	  }
 
 	  private static Bucket standardBucket() {

@@ -3,13 +3,23 @@ package com.example.main.backend.api;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import com.example.main.backend.DBHandler;
-import com.example.main.backend.DatabaseCreator;
+import com.example.main.backend.SpellChecker;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
+import com.example.main.backend.utils.Utils;
 
+@Component
 public class SearchAPI {
-
+	
+	@Autowired
+	DBHandler db;
+	
 	class Query {
 		public String query;
 		public URL site;
@@ -22,9 +32,6 @@ public class SearchAPI {
 			this.query = q;
 			this.site = u;
 		}
-	}
-
-	public SearchAPI() {
 	}
 
 	public Query resolveSiteOperator(String a_query) {
@@ -73,84 +80,81 @@ public class SearchAPI {
 		return q;
 	}
 
-	public SearchResultResponse searchAPIconjunctive(String a_query, int limit) {
+	public SearchResultResponse searchAPIconjunctive(String a_query, int limit, String[] languages) {
 
 		Query q = resolveSiteOperator(a_query);
-		Connection con = null;
 		SearchResultResponse res = new SearchResultResponse(q.query, limit);
 
 		try {
-			con = new DatabaseCreator().getConnection();
-			DBHandler handler = new DBHandler();
-			res = handler.searchConjunctiveQuery(con, q.query, limit, res);
-			int cw = handler.getCollectionSize(con);
+			res = db.searchConjunctiveQuery(q.query, limit, languages, res);
+			int cw = db.getCollectionSize();
 			res.setCollectionSize(cw);
-			res = handler.getStats(con, q.query, res);
+			res = db.getStats(q.query, res);
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		} catch (Exception ex) {
 			ex.printStackTrace();
-		} finally {
-			if (con != null) {
-				try {
-					con.close();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-			}
-		}
+		} 
 		res.filterResultsWithSite(q.site);
 		return res;
 	}
 
-	public SearchResultResponse searchAPIdisjunctive(String a_query, int limit) {
+	public SearchResultResponse searchAPIdisjunctive(String a_query, int limit, String[] languages, int scoringMethod) {
 
 		Query q = resolveSiteOperator(a_query);
 		SearchResultResponse res = new SearchResultResponse(q.query, limit);
-		Connection con = null;
 
 		try {
-			con = new DatabaseCreator().getConnection();
-			DBHandler handler = new DBHandler();
-			res = handler.searchDisjunctiveQuery(con, q.query, limit, res);
-			int cw = handler.getCollectionSize(con);
+			res = db.searchDisjunctiveQuery(q.query, limit, languages, res, scoringMethod);
+			int cw = db.getCollectionSize();
 			res.setCollectionSize(cw);
-			res = handler.getStats(con, q.query, res);
+			res = db.getStats(q.query, res);
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		} catch (Exception ex) {
 			ex.printStackTrace();
-		} finally {
-			if (con != null) {
-				try {
-					con.close();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-			}
 		}
 		res.filterResultsWithSite(q.site);
 		return res;
 	}
 
 	public void updateScores() {
-		Connection con = null;
 		try {
-			con = new DatabaseCreator().getConnection();
-			DBHandler handler = new DBHandler();
-			handler.computeTfIdf(con);
+			db.computePageRank(0.1,0.001);
+			db.updateScores();
+
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		} catch (Exception ex) {
 			ex.printStackTrace();
-		} finally {
-			if (con != null) {
+		}
+	}
+	
+	public String getDidYouMeanQuery(String query)  {
+		
+		String altQuery = null;
+		Connection con = null;
+		try {
+			List<String> terms = Utils.getTermsWithoutQuotes(query);
+			terms.addAll(Utils.getTermsInQuotes(query));
+			String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
+			con = db.getConnection();
+			SpellChecker spellChecker = new SpellChecker();
+			Map<String, List<Map.Entry<String, Integer>>> relTerms = spellChecker.findRelatedTermsForLessFrequentTerms(termsArr, con);
+			
+			altQuery = spellChecker.findBestAlternateQuery(terms, relTerms, con);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		finally {
+			if(con != null)
 				try {
 					con.close();
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
-			}
 		}
+		
+		return altQuery;
 	}
 }

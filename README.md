@@ -20,11 +20,25 @@ Use the following to run the Indexing scheduler.<br/>
 ## Usage instructions
 
 ### Crawler 
-For crawler, add seed urls in the seed_urls.txt file in the application resources. (src/main/resources)
-One URL per line.
-You can run the crawler with Command Line Interface CrawlerScheduler.java in `src/main/java/com/example/main` which takes following arguments:
+For crawler, add seed urls in the `seed_urls.txt` file in `src/main/resources` (one per line).
+The crawler is started with the whole Spring Boot application and starts the crawler based on the properties file `main/resources/application.properties`.
 
-@max_depth, @max_docs, @leaf_domain_boolean, @numberOfThreadsToSpawn
+You can set there the following properties:
+
+|    Property         |             Description         |
+|---------------------|---------------------------------|
+|**crawler.max_depth**|	max depth to crawl |
+|**crawler.max_docs**| maximum number of docs|
+|**crawler.leave_domain_boolean**| flag that indicates to search only in the provided domains|
+|**crawler.numberOfThreadsToSpawn**| number of threads to spawn|
+
+The program provides you then with the following commands to interact with the crawler:
+
+|     Command        | Description |
+|--------------------|-------------|
+|**stop**| stops the crawler if it is not already terminated|
+|**restart**| restarts the crawler with the automatically saved instance state|
+|**stop completely**| stops the crawler if it is not already terminated and terminates the command line interface|
 
 ### Connection
 Edit relevant properties in the application.properties file which is located in the same resources folder as above.

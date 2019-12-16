@@ -1,3 +1,12 @@
 .tr {
 	cursor:pointer;
 }
+
+.btn-primary{
+	background-color:#006A99 !important;
+	border-color:#047699 !important;
+}
+
+.active {
+	background-color:#006A99 !important;
+}

@@ -22,6 +22,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-jdbc</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>com.zaxxer</groupId>
+					<artifactId>HikariCP</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -62,7 +68,11 @@
 		    <artifactId>bucket4j-core</artifactId>
 		    <version>4.5.0</version>
 		</dependency>
-		
+		<dependency>
+		  	<groupId>org.la4j</groupId>
+		  	<artifactId>la4j</artifactId>
+		  	<version>0.6.0</version>
+		</dependency>	
 	</dependencies>
 
 	<build>

@@ -55,10 +55,12 @@ public class LanguageDetector {
 		double probabilityEnglish = 1;
 
 		for (String w : words) {
-			probabilityGerman *= getProbability(Language.GERMAN, w);
-			probabilityEnglish *= getProbability(Language.ENGLISH, w);
+			probabilityGerman *= getProbability(Language.GERMAN, w.toLowerCase());
+			probabilityEnglish *= getProbability(Language.ENGLISH, w.toLowerCase());
 		}
 
+		System.out.println("Probabilities: "+probabilityGerman+ " "+probabilityEnglish);
+		
 		return probabilityEnglish > probabilityGerman ? Language.ENGLISH : Language.GERMAN;
 	}
 
@@ -82,7 +84,7 @@ public class LanguageDetector {
 			String line;
 			while ((line = r.readLine()) != null) {
 				String[] split = line.split(" ");
-				m.put(split[0], Integer.parseInt(split[1]));
+				m.put(split[0].toLowerCase(), Integer.parseInt(split[1]));
 			}
 			r.close();
 			return m;
@@ -98,7 +100,7 @@ public class LanguageDetector {
 			String line;
 			while ((line = r.readLine()) != null) {
 				String[] split = line.split(" ");
-				m.put(split[0], Integer.parseInt(split[1]));
+				m.put(split[0].toLowerCase(), Integer.parseInt(split[1]));
 			}
 			r.close();
 			return m;
@@ -117,10 +119,10 @@ public class LanguageDetector {
 	private double getProbability(String language, String term) {
 		if (Language.GERMAN.equals(language)) {
 			int frequency = germanWordCounts.getOrDefault(term, 1);
-			return frequency < 2 ? 1 : frequency / wordCountGerman;
+			return Math.log(((double)frequency) / wordCountGerman);
 		} else if (Language.ENGLISH.equals(language)) {
 			int frequency = englishWordCounts.getOrDefault(term, 1);
-			return frequency < 2 ? 1 : frequency / wordCountEnglish;
+			return Math.log(((double)frequency) / wordCountEnglish);
 		} else {
 			throw new IllegalArgumentException("Language not supported");
 		}

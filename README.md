@@ -1,5 +1,8 @@
 ## Web Search Engine
 
+####Readme change log:
+17.12.2019 Added going live section
+
 ## Build instructions
 
 Checkout the project repository. Build using Maven.<br/>
@@ -69,6 +72,27 @@ Path: `src/main/java/com/example/main/CLIIndexing`
 
 Arguments:
 size of interval in milliseconds
+
+##Going live!
+The web interface is accessible at:
+
+[http://isproj-vm01.informatik.uni-kl.de:8080/is-project/index.html](http://isproj-vm01.informatik.uni-kl.de:8080/is-project/index.html)
+
+The json interface is accessible at:
+
+[http://isproj-vm01.informatik.uni-kl.de:8080/is-project/json?query=#1&k=#2&score=#3]()
+
+Replace the argument placeholder #1,#2, and #3 by:
+
+|Argument|Description|Example|
+|--------|-----------|-------|
+|#1      |Keywords separated by +|database+course|
+|#2      |Integer that represents the maximum number of results| 10|
+|#3      |Integer that represents the scoring function:| 3|
+|        |1 - TF*IDF||
+|        |2 - Okapi BM25||
+|        |3 - Combined Score||
+
 
 
 

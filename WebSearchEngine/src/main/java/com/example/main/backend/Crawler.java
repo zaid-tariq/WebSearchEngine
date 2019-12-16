@@ -80,7 +80,7 @@ public class Crawler extends Thread {
 			if (saveState != null) {
 				this.maximumDepth = (int) saveState[0];
 				this.maximumNumberOfDocs = (int) saveState[1];
-				this.crawledDocuments = (int) saveState[2];
+				this.crawledDocuments = 0; //(int) saveState[2];
 				this.leaveDomain = (boolean) saveState[3];
 				this.parallelism = (int) saveState[4];
 				this.urls = fromStringArray((String[]) saveState[6]);
@@ -118,11 +118,12 @@ public class Crawler extends Thread {
 				} else {
 					db.setCrawlerFlag(false);
 				}
+				Thread.sleep(500);
 			}
 
 			db.saveCrawlerState(maximumDepth, maximumNumberOfDocs, crawledDocuments, leaveDomain, parallelism, false,
 					fromLinkedList(this.urls));
-		} catch (SQLException | URISyntaxException e) {
+		} catch (SQLException | URISyntaxException | InterruptedException e) {
 			e.printStackTrace();
 		}
 	}

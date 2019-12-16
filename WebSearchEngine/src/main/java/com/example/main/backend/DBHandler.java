@@ -51,7 +51,7 @@ public class DBHandler {
 		con.close();
 	}
 
-	public SearchResultResponse searchConjunctiveQuery(String query, int a_k, String[] languages,
+	public SearchResultResponse searchConjunctiveQuery(String query, int k_limit, String[] languages,
 			SearchResultResponse a_response) throws SQLException {
 
 		Connection con = getConnection();
@@ -62,11 +62,11 @@ public class DBHandler {
 		sql.setArray(2, con.createArrayOf("text", languages));
 		sql.execute();
 		ResultSet results = sql.getResultSet();
-		return processSearchQueryResultSet(con, results, searchTerms, a_response); // closes connection too
+		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, 3); // closes connection too
 	}
 
-	public SearchResultResponse searchDisjunctiveQuery(String query, int a_k, String[] languages,
-			SearchResultResponse a_response) throws SQLException {
+	public SearchResultResponse searchDisjunctiveQuery(String query, int k_limit, String[] languages,
+			SearchResultResponse a_response, int scoringMethod) throws SQLException {
 
 		Connection con = getConnection();
 
@@ -82,11 +82,11 @@ public class DBHandler {
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		searchTerms.addAll(requiredTerms); // combine all terms
-		return processSearchQueryResultSet(con, results, searchTerms, a_response); // closes connection too
+		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, scoringMethod); // closes connection too
 	}
 
 	private SearchResultResponse processSearchQueryResultSet(Connection con, ResultSet results,
-			List<String> searchTerms, SearchResultResponse a_response) throws SQLException {
+			List<String> searchTerms,int k_limit, SearchResultResponse a_response, int scoringMethod) throws SQLException {
 
 		HashMap<String, DBResponseDocument> resDocs = new HashMap<String, DBResponseDocument>();
 
@@ -99,6 +99,7 @@ public class DBHandler {
 				resDocs.put(url, new DBResponseDocument(url));
 			DBResponseDocument doc = resDocs.get(url);
 			doc.add_term(term, score_tfidf, score_okapi);
+			doc.scoringMethod = scoringMethod;
 		}
 		results.close();
 		con.close();
@@ -111,18 +112,21 @@ public class DBHandler {
 		ArrayList<DBResponseDocument> sortedSet = new ArrayList<DBResponseDocument>();
 		for (String key : resDocs.keySet()) {
 			DBResponseDocument doc = resDocs.get(key);
-			double similarityScore = queryDoc.getCosineSimilarity_tfIdf(doc);
-			doc.cosSim = similarityScore;
+			queryDoc.calculateCosineSimilarity(doc);
 			sortedSet.add(doc);
 		}
 
-		Collections.sort(sortedSet, (d1, d2) -> -Double.compare(d1.cosSim, d2.cosSim));
+		Collections.sort(sortedSet, (d1, d2) -> -Double.compare(d1.getCosSimScore(), d2.getCosSimScore()));
 
 		int rank = 1;
 		if (a_response == null)
 			a_response = new SearchResultResponse();
-		for (DBResponseDocument resDoc : sortedSet)
-			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.cosSim);
+		for (DBResponseDocument resDoc : sortedSet) {
+			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.getCosSimScore());
+			if(rank >= k_limit)
+				break;
+		}
+			
 		return a_response;
 	}
 

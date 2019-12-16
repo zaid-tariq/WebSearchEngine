@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -11,15 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
-import javafx.util.Pair;
-
-@SuppressWarnings("restriction")
 public class SpellChecker {
 
 	int term_distance_threshold = 2; // what distance to consider while classifying term as similar
 	int rare_threshold = 5; // what document_frequency to consider rare
 
-	public Map<String, List<Pair<String, Integer>>> findRelatedTermsForLessFrequentTerms(String[] a_terms,
+	public Map<String, List<Map.Entry<String, Integer>>> findRelatedTermsForLessFrequentTerms(String[] a_terms,
 			Connection con) throws SQLException {
 
 		/*
@@ -28,7 +26,7 @@ public class SpellChecker {
 		 * Ignore stop words while making this check
 		 */
 
-		Map<String, List<Pair<String, Integer>>> relatedTerms = new HashMap<String, List<Pair<String, Integer>>>();
+		Map<String, List<Map.Entry<String, Integer>>> relatedTerms = new HashMap<String, List<Map.Entry<String, Integer>>>();
 		PreparedStatement sql = con.prepareStatement(
 				"SELECT * from get_related_terms_to_non_existant_or_rare_terms(?,?,?) ORDER BY distance FETCH FIRST 10 ROWS ONLY");
 		sql.setArray(1, con.createArrayOf("text", a_terms));
@@ -43,32 +41,32 @@ public class SpellChecker {
 			System.out.println("Related Term: " + relatedTerm);
 			int dist = results.getInt(3);
 			if (!relatedTerms.containsKey(term))
-				relatedTerms.put(term, new ArrayList<Pair<String, Integer>>());
-			List<Pair<String, Integer>> tempRelTerms = relatedTerms.get(term);
-			tempRelTerms.add(new Pair<String, Integer>(relatedTerm, dist));
+				relatedTerms.put(term, new ArrayList<Map.Entry<String, Integer>>());
+			List<Map.Entry<String, Integer>> tempRelTerms = relatedTerms.get(term);
+			tempRelTerms.add(new AbstractMap.SimpleEntry<String, Integer>(relatedTerm, dist));
 		}
 
 		return relatedTerms;
 	}
 
 	public String findBestAlternateQuery(List<String> a_origQueryTerms,
-			Map<String, List<Pair<String, Integer>>> a_query_and_related_terms, Connection con) throws SQLException {
+			Map<String, List<Map.Entry<String, Integer>>> a_query_and_related_terms, Connection con) throws SQLException {
 
-		LinkedList<Pair<String, Integer>> queries = new LinkedList<Pair<String, Integer>>();
-		queries.add(new Pair<String, Integer>("", 0));
+		LinkedList<Map.Entry<String, Integer>> queries = new LinkedList<Map.Entry<String, Integer>>();
+		queries.add(new AbstractMap.SimpleEntry<String, Integer>("", 0));
 		
-		LinkedList<Pair<String,Integer>> newQueries = new LinkedList<Pair<String,Integer>>();
+		LinkedList<Map.Entry<String,Integer>> newQueries = new LinkedList<Map.Entry<String,Integer>>();
 		for (String qTerm : a_origQueryTerms) {
-			for (Pair<String, Integer> relatedTerm : a_query_and_related_terms.get(qTerm)) {
-				for(Pair<String,Integer> query : queries) {
-					newQueries.add(new Pair<String,Integer>(query.getKey() +" "+ relatedTerm.getKey(), query.getValue()+relatedTerm.getValue()));
+			for (Map.Entry<String, Integer> relatedTerm : a_query_and_related_terms.get(qTerm)) {
+				for(Map.Entry<String,Integer> query : queries) {
+					newQueries.add(new AbstractMap.SimpleEntry<String,Integer>(query.getKey() +" "+ relatedTerm.getKey(), query.getValue()+relatedTerm.getValue()));
 				}
 			}
 			queries = newQueries;
-			newQueries = new LinkedList<Pair<String,Integer>>();
+			newQueries = new LinkedList<Map.Entry<String,Integer>>();
 		}
-		Pair<String,Integer> best = null;
-		for(Pair<String,Integer> q : queries) {
+		Map.Entry<String,Integer> best = null;
+		for(Map.Entry<String,Integer> q : queries) {
 			System.out.println(q.getKey()+ " "+q.getValue());
 			if(best == null || best.getValue() > q.getValue()) {
 				best = q;

@@ -5,81 +5,81 @@ import java.lang.Math;
 
 public class DBResponseDocument {
 	
-	public class score_pair{
+	public class Scores{
 		public Float okapi_score;
 		public Float tfidf_score; 
+		public Float combined;
 	}
 	
 	public String url;
-	public HashMap<String, score_pair> terms_scores;
-	public double cosSim;
+	public HashMap<String, Scores> terms_scores;
+	private double cosSim;
+	public double pageRank;
+	public int scoringMethod;
+	double alpha = 0.7;
 	public DBResponseDocument(String url2) {
 		this.url = url2;
 	}
 	
 
 	public void add_term(String term, float tfidf_score, float okapi_score) {
-		score_pair pair = new score_pair();
-		pair.okapi_score = okapi_score;
-		pair.tfidf_score = tfidf_score;
+		Scores scores  = new Scores();
+		scores.okapi_score = okapi_score;
+		scores.tfidf_score = tfidf_score;
 		if(this.terms_scores == null)
-			terms_scores = new HashMap<String, score_pair>();
+			terms_scores = new HashMap<String, Scores>();
 			
-		this.terms_scores.put(term, pair);
+		this.terms_scores.put(term, scores);
 	}
 	
-	public double getCosineSimilarity_tfIdf(DBResponseDocument doc2) {
+	private double calculateCombinedScore() {
+		
+		return (alpha * cosSim)+((1-alpha)*pageRank);
+	}
+
+
+	public void calculateCosineSimilarity(DBResponseDocument doc2) {
 		
 		double dotProd = 0, norm1 = 0, norm2 = 0;
 		
 		for(String key : this.terms_scores.keySet()) {
 			if(doc2.terms_scores.containsKey(key)) {
-				dotProd += (this.terms_scores.get(key).tfidf_score * doc2.terms_scores.get(key).tfidf_score);
+				dotProd += (this.getScore(terms_scores.get(key)) * doc2.getScore(terms_scores.get(key)));
 			}
 			
 			//calculate norm alongside
 			
-			norm1 += Math.pow(this.terms_scores.get(key).tfidf_score, 2);
+			norm1 += Math.pow(this.getScore(terms_scores.get(key)), 2);
 		}
 		
 		for(String key : doc2.terms_scores.keySet()) 
-			norm2 += Math.pow(doc2.terms_scores.get(key).tfidf_score, 2);
+			norm2 += Math.pow(doc2.getScore(terms_scores.get(key)), 2);
 		
 		norm1 = Math.sqrt(norm1);
 		norm2 = Math.sqrt(norm2);
 		
 		Double normProd = norm1*norm2;
 		if(normProd == 0)
-			return 0;
+			this.cosSim = 0;
 		else
-			return dotProd/normProd;
+			this.cosSim = dotProd/normProd;
+		
+		if(this.scoringMethod == 3)
+			this.cosSim = this.calculateCombinedScore(); 
 	}
 	
-public double getCosineSimilarity_okapi(DBResponseDocument doc2) {
+
+	private float getScore(Scores score) {
 		
-		double dotProd = 0, norm1 = 0, norm2 = 0;
-		
-		for(String key : this.terms_scores.keySet()) {
-			if(doc2.terms_scores.containsKey(key)) {
-				dotProd += (this.terms_scores.get(key).okapi_score * doc2.terms_scores.get(key).okapi_score);
-			}
-			
-			//calculate norm alongside
-			
-			norm1 += Math.pow(this.terms_scores.get(key).okapi_score, 2);
-		}
-		
-		for(String key : doc2.terms_scores.keySet()) 
-			norm2 += Math.pow(doc2.terms_scores.get(key).okapi_score, 2);
-		
-		norm1 = Math.sqrt(norm1);
-		norm2 = Math.sqrt(norm2);
-		
-		Double normProd = norm1*norm2;
-		if(normProd == 0)
-			return 0;
+		if(this.scoringMethod == 1)
+			return score.tfidf_score;
 		else
-			return dotProd/normProd;
+			return score.okapi_score;
+	}
+
+
+	public double getCosSimScore() {
+		return this.cosSim;
 	}
 
 }

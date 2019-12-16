@@ -14,8 +14,6 @@ import com.example.main.backend.SpellChecker;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.utils.Utils;
 
-import javafx.util.Pair;
-
 @Component
 public class SearchAPI {
 	
@@ -101,13 +99,13 @@ public class SearchAPI {
 		return res;
 	}
 
-	public SearchResultResponse searchAPIdisjunctive(String a_query, int limit, String[] languages) {
+	public SearchResultResponse searchAPIdisjunctive(String a_query, int limit, String[] languages, int scoringMethod) {
 
 		Query q = resolveSiteOperator(a_query);
 		SearchResultResponse res = new SearchResultResponse(q.query, limit);
 
 		try {
-			res = db.searchDisjunctiveQuery(q.query, limit, languages, res);
+			res = db.searchDisjunctiveQuery(q.query, limit, languages, res, scoringMethod);
 			int cw = db.getCollectionSize();
 			res.setCollectionSize(cw);
 			res = db.getStats(q.query, res);
@@ -142,7 +140,7 @@ public class SearchAPI {
 			String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
 			con = db.getConnection();
 			SpellChecker spellChecker = new SpellChecker();
-			Map<String, List<Pair<String, Integer>>> relTerms = spellChecker.findRelatedTermsForLessFrequentTerms(termsArr, con);
+			Map<String, List<Map.Entry<String, Integer>>> relTerms = spellChecker.findRelatedTermsForLessFrequentTerms(termsArr, con);
 			
 			altQuery = spellChecker.findBestAlternateQuery(terms, relTerms, con);
 		} catch (Exception e) {

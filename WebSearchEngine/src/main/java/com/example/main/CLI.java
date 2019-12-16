@@ -26,7 +26,7 @@ public class CLI {
 		if(args[2].equals("conjunctive"))
 			res = handler.searchConjunctiveQuery(args[0], Integer.parseInt(args[1]), new String[] {"english","german"}, null);
 		else if(args[2].equals("disjunctive"))
-			res = handler.searchDisjunctiveQuery(args[0], Integer.parseInt(args[1]),  new String[] {"english","german"}, null);
+			res = handler.searchDisjunctiveQuery(args[0], Integer.parseInt(args[1]),  new String[] {"english","german"}, null, 3);
 		else
 			throw new Exception("Choose either conjunctive or disjunctive query method");
 			

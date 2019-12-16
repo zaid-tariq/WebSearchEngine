@@ -78,7 +78,7 @@ public class LanguageDetector {
 			try {
 				file = new ClassPathResource("english_counts.txt").getFile();
 			} catch (FileNotFoundException ex) {
-				ex.printStackTrace();
+				file = Utils.createTempFileFromInputStream("english_counts.txt");
 			}
 			BufferedReader r = new BufferedReader(new FileReader(file));
 			String line;
@@ -94,7 +94,7 @@ public class LanguageDetector {
 			try {
 				file = new ClassPathResource("german_counts.txt").getFile();
 			} catch (FileNotFoundException ex) {
-				ex.printStackTrace();
+				file = Utils.createTempFileFromInputStream("german_counts.txt");
 			}
 			BufferedReader r = new BufferedReader(new FileReader(file));
 			String line;

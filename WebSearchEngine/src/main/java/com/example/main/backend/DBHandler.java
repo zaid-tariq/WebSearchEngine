@@ -116,7 +116,7 @@ public class DBHandler {
 			sortedSet.add(doc);
 		}
 
-		Collections.sort(sortedSet, (d1, d2) -> Double.compare(d1.cosSim, d2.cosSim));
+		Collections.sort(sortedSet, (d1, d2) -> -Double.compare(d1.cosSim, d2.cosSim));
 
 		int rank = 1;
 		if (a_response == null)
@@ -508,11 +508,8 @@ public class DBHandler {
 	}
 
 	public void computePageRank(double randomJumpProbability, double terminationCriteria) throws SQLException {
-		// TODO: Extend database schema
 		Connection con = this.getConnection();
 		con.setAutoCommit(false);
-		// PreparedStatement outgoingEdges = con.prepareStatement("SELECT from_docid,
-		// to_docid FROM links");
 		PreparedStatement edges = con.prepareStatement(
 				"SELECT d1.docid, d2.docid, (SELECT EXISTS (SELECT 1 FROM links WHERE from_docid = d1.docid AND to_docid = d2.docid)), (SELECT count(to_docid) FROM links WHERE from_docid = d1.docid) FROM documents d1, documents d2 ORDER BY d1.docid, d2.docid");
 		PreparedStatement docCount = con.prepareStatement("SELECT count(docid) FROM documents");

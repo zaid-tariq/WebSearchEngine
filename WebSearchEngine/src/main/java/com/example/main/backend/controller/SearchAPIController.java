@@ -24,8 +24,7 @@ public class SearchAPIController {
 	public ResponseEntity<SearchResultResponse> searchAPIconjunctive(@RequestParam(value = "query") String query,
 			@RequestParam(value = "limit", defaultValue = "50") int limit) {
 		
-		//TODO: Insert language flag
-		return ResponseEntity.ok().body(searchApi.searchAPIconjunctive(query, limit, null));
+		return ResponseEntity.ok().body(searchApi.searchAPIconjunctive(query, limit, new String[] {"english","german"}));
 		
 	}
 	
@@ -35,7 +34,7 @@ public class SearchAPIController {
 			@RequestParam(value = "limit", defaultValue = "50") int limit) {
 		
 		//TODO: Insert language flag
-		SearchResultResponse res = searchApi.searchAPIdisjunctive(query, limit, null);
+		SearchResultResponse res = searchApi.searchAPIdisjunctive(query, limit, new String[] {"english","german"});
 		return ResponseEntity.ok().body(res);
 	}
 	

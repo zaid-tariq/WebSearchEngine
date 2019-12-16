@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" href="img/favicon.ico"/>
 </head>
 <body class="h-100">
 <div class="container-fluid h-100 position-relative">
@@ -28,8 +27,8 @@
         <div class="card col-5" style="background-color:transparent;border:none">
             <div class="card-body text-center">
             	<div class="row mb-4">
-            		<a href="/" class="col-6 offset-3">
-            			<img style="width:inherit;height:auto" src="images/TUgle.png" alt="TUgle">
+            		<a href="/is-project/index.html" class="col-6 offset-3">
+            			<img style="width:inherit;height:auto" src="../images/TUgle.png" alt="TUgle">
             		</a>
             	</div>                
             	<form action="results" method="get">
@@ -49,7 +48,7 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
             integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
             crossorigin="anonymous"></script>
-    <script src="js/languageDropdown.js"></script>
+    <script src="../js/languageDropdown.js"></script>
 </div>
 </body>
 </html>

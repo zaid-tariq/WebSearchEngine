@@ -13,7 +13,7 @@ public class GetSearchResults {
 	@Autowired
 	SearchAPI api;
 
-	@RequestMapping("is-project/")
+	@RequestMapping("is-project/index.html")
 	public String helloWorld(Model model) {
 		return "index";
 	}

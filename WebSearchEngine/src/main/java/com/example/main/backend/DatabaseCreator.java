@@ -19,7 +19,7 @@ public class DatabaseCreator {
 
 			// CREATE TABLE IF NOT EXISTS s by DDL statements
 			createExtensionLevenshtein(connection);
-			createExtensionTrigram(connection);
+			//createExtensionTrigram(connection);
 			createDocumentsTable(connection);
 			createFeatureTable(connection);
 			createViewsOnFeaturesTable(connection);
@@ -66,7 +66,7 @@ public class DatabaseCreator {
 
 	private void createFunctionConjunctive_search(Connection connection) throws SQLException {
 		String query = 
-		"CREATE OR REPLACE FUNCTION get_docs_for_conjunctive_search(search_terms text[])"
+		"CREATE OR REPLACE FUNCTION get_docs_for_conjunctive_search(search_terms text[], lang TEXT[])"
 		+ "    	RETURNS TABLE(docurl text, term text, tfidf real, okapi real)" 
 		+ "    	LANGUAGE 'plpgsql'"
 		+ "		AS $$"
@@ -87,7 +87,8 @@ public class DatabaseCreator {
 				" 		 				SELECT d.url, f.term, f.score_tfidf, f.score_okapi" + 
 				" 		 				from features f, filtered_docs fd, documents d				" + 
 				" 		 				WHERE 	f.docid = fd.docid 						" + 
-				" 		 				AND f.docid = d.docid			" + 
+				" 		 				AND f.docid = d.docid"
+				+ "						AND d.language = ANY(lang)			" + 
 				" 		 				ORDER BY d.docid;	" + 
 				" 		 END; $$;";
 		Statement statement = connection.createStatement();
@@ -99,7 +100,7 @@ public class DatabaseCreator {
 
 	private void createFunctionDisjunctive_search(Connection connection) throws SQLException {
 		String query = 
-				"CREATE OR REPLACE FUNCTION get_docs_for_disjunctive_search(search_terms text[], required_terms text[])"
+				"CREATE OR REPLACE FUNCTION get_docs_for_disjunctive_search(search_terms text[], required_terms text[], lang TEXT[])"
 				+ "    	RETURNS TABLE(docurl text, term text, tfidf real, okapi real)" 
 				+ "    	LANGUAGE 'plpgsql'"
 				+ "		AS $$" +
@@ -128,7 +129,8 @@ public class DatabaseCreator {
 						" 						SELECT d.url, f.term, f.score_tfidf, f.score_okapi" + 
 						" 		 				from features f, filtered_docs_keywords fd, documents d				" + 
 						" 		 				WHERE 	f.docid = fd.docid 						" + 
-						" 		 				AND f.docid = d.docid			" + 
+						" 		 				AND f.docid = d.docid"
+						+ "						AND d.language = ANY(lang)			" + 
 						" 		 				ORDER BY d.docid;	" + 
 						" END; $$;";
 				Statement statement = connection.createStatement();
@@ -364,26 +366,26 @@ public class DatabaseCreator {
 				"AS " + 
 				"$$ " + 
 				"BEGIN " + 
-				"	CREATE TEMP TABLE search_terms_table(term text);" + 
+				"	CREATE TEMP TABLE IF NOT EXISTS search_terms_table(term text) ON COMMIT DROP;" + 
 				"	INSERT INTO search_terms_table SELECT unnest(search_terms);" + 
 				"	RETURN QUERY " + 
 				"		WITH " + 
 				"			query_terms AS (" + 
-				"				SELECT DISTINCT f.term --rare query term" + 
+				"				SELECT DISTINCT f.term" + 
 				"				FROM features f, search_terms_table st" + 
 				"				WHERE f.term = st.term AND f.df <= rarity_thresh" + 
 				"				UNION" + 
-				"				SELECT st.term --also add query terms that do not exist in DB" + 
+				"				SELECT st.term" + 
 				"				FROM search_terms_table st" + 
 				"				)," + 
 				"			collection_terms AS (" + 
-				"				SELECT f1.term FROM features f1 " + 
+				"				SELECT f1.term FROM features f1 WHERE length(f1.term) < 255 " + 
 				"				EXCEPT " + 
 				"				SELECT qt.term FROM query_terms qt" + 
 				"				)" + 
 				"	  SELECT qt.term, ct.term, levenshtein(qt.term, ct.term) AS dist" + 
 				"	  FROM query_terms qt, collection_terms ct " + 
-				"	  WHERE dist <= dist_thresh;" + 
+				"	  WHERE levenshtein(qt.term, ct.term) <= dist_thresh;" + 
 				"END; " + 
 				"$$;";
 		

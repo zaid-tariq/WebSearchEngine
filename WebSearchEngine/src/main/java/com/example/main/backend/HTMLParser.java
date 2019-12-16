@@ -113,7 +113,7 @@ public class HTMLParser {
 
 		// Language was not detected by language tag in first step
 		if (doc.getLanguage() == null) {
-			int tuningParameterWordsToConsider = 100;
+			int tuningParameterWordsToConsider = 40;
 			LanguageDetector detector = new LanguageDetector();
 			List<String> wordsToConsider = extractedContent.subList(0,
 					tuningParameterWordsToConsider < extractedContent.size() ? tuningParameterWordsToConsider - 1

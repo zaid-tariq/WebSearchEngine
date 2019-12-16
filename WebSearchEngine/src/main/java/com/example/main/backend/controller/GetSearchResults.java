@@ -20,9 +20,9 @@ public class GetSearchResults {
 	
 	@RequestMapping("/results")
 	public String results(Model model, @RequestParam(value = "query") String query,
-			@RequestParam(value = "limit", defaultValue = "20") int limit) {
+			@RequestParam(value = "limit", defaultValue = "20") int limit, @RequestParam(value="lang") String languages) {
 		
-		model.addAttribute("results", api.searchAPIdisjunctive(query, limit).resultList);
+		model.addAttribute("results", api.searchAPIdisjunctive(query, limit, languages.split(" ")).resultList);
 		model.addAttribute("didYouMean", api.getDidYouMeanQuery(query));
 		return "results";
 	}

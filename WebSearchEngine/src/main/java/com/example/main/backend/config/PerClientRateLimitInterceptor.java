@@ -25,21 +25,25 @@ public class PerClientRateLimitInterceptor implements HandlerInterceptor {
 	  public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
 	      Object handler) throws Exception {
 
-	    String clientIP = getClientIP(request);
-	    Bucket requestBucket = this.buckets.computeIfAbsent(clientIP, key -> standardBucket());
+		if(request.getAttribute("query")!= null) {
+			 String clientIP = getClientIP(request);
+			    Bucket requestBucket = this.buckets.computeIfAbsent(clientIP, key -> standardBucket());
 
-	    ConsumptionProbe probe = requestBucket.tryConsumeAndReturnRemaining(1);
-	    if (probe.isConsumed()) {
-	      response.addHeader("X-Rate-Limit-Remaining",
-	          Long.toString(probe.getRemainingTokens()));
-	      return true;
-	    }
+			    ConsumptionProbe probe = requestBucket.tryConsumeAndReturnRemaining(1);
+			    if (probe.isConsumed()) {
+			      response.addHeader("X-Rate-Limit-Remaining",
+			          Long.toString(probe.getRemainingTokens()));
+			      return true;
+			    }
 
-	    response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value()); // 429
-	    response.addHeader("X-Rate-Limit-Retry-After-Milliseconds",
-	        Long.toString(TimeUnit.NANOSECONDS.toMillis(probe.getNanosToWaitForRefill())));
-
-	    return false;
+			    response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value()); // 429
+			    response.addHeader("X-Rate-Limit-Retry-After-Milliseconds",
+			    Long.toString(TimeUnit.NANOSECONDS.toMillis(probe.getNanosToWaitForRefill())));
+			    
+			    return false;
+		}
+		  
+		return true;
 	  }
 
 	  private static Bucket standardBucket() {

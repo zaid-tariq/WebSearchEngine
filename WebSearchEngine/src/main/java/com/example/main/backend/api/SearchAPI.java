@@ -82,13 +82,13 @@ public class SearchAPI {
 		return q;
 	}
 
-	public SearchResultResponse searchAPIconjunctive(String a_query, int limit) {
+	public SearchResultResponse searchAPIconjunctive(String a_query, int limit, String[] languages) {
 
 		Query q = resolveSiteOperator(a_query);
 		SearchResultResponse res = new SearchResultResponse(q.query, limit);
 
 		try {
-			res = db.searchConjunctiveQuery(q.query, limit, res);
+			res = db.searchConjunctiveQuery(q.query, limit, languages, res);
 			int cw = db.getCollectionSize();
 			res.setCollectionSize(cw);
 			res = db.getStats(q.query, res);
@@ -101,13 +101,13 @@ public class SearchAPI {
 		return res;
 	}
 
-	public SearchResultResponse searchAPIdisjunctive(String a_query, int limit) {
+	public SearchResultResponse searchAPIdisjunctive(String a_query, int limit, String[] languages) {
 
 		Query q = resolveSiteOperator(a_query);
 		SearchResultResponse res = new SearchResultResponse(q.query, limit);
 
 		try {
-			res = db.searchDisjunctiveQuery(q.query, limit, res);
+			res = db.searchDisjunctiveQuery(q.query, limit, languages, res);
 			int cw = db.getCollectionSize();
 			res.setCollectionSize(cw);
 			res = db.getStats(q.query, res);
@@ -123,9 +123,7 @@ public class SearchAPI {
 	public void updateScores() {
 		try {
 			db.computePageRank(0.1,0.001);
-			System.out.println("HALLO?");
 			db.updateScores();
-			System.out.println("HERE");
 
 		} catch (SQLException ex) {
 			ex.printStackTrace();
@@ -145,6 +143,7 @@ public class SearchAPI {
 			con = db.getConnection();
 			SpellChecker spellChecker = new SpellChecker();
 			Map<String, List<Pair<String, Integer>>> relTerms = spellChecker.findRelatedTermsForLessFrequentTerms(termsArr, con);
+			
 			altQuery = spellChecker.findBestAlternateQuery(terms, relTerms, con);
 		} catch (Exception e) {
 			e.printStackTrace();

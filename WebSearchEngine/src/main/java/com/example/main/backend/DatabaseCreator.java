@@ -140,7 +140,7 @@ public class DatabaseCreator {
 
 	private void createFeatureTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
-				"CREATE TABLE IF NOT EXISTS features (docid INT REFERENCES documents(docid), term TEXT, term_frequency INT, score_tfidf real, score_okapi real, idf_tfidf real, idf_okapi real, df int )");
+				"CREATE TABLE IF NOT EXISTS features (docid INT REFERENCES documents(docid), term TEXT, term_frequency INT, score_tfidf real, score_okapi real, score_combined real, idf_tfidf real, idf_okapi real, df int )");
 		statement.execute();
 		statement.close();
 	}
@@ -351,7 +351,12 @@ public class DatabaseCreator {
 				"" + 
 				"CREATE OR REPLACE VIEW features_bm25 AS" + 
 				"	SELECT docid, term, score_okapi AS score" + 
+				"	FROM features;"+ 
+				"" + 
+				"CREATE OR REPLACE VIEW features_combined AS" + 
+				"	SELECT docid, term, score_combined AS score" + 
 				"	FROM features;";
+		
 		
 		Statement statement = con.createStatement();
 		statement.execute(query);

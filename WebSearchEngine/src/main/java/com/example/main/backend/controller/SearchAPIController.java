@@ -13,26 +13,25 @@ import com.example.main.backend.api.responseObjects.SearchResultResponse;
 
 
 @RestController
-@RequestMapping("/rest/search")
 public class SearchAPIController {
 	
 	@Autowired
 	SearchAPI searchApi;
 	
-	@GetMapping("/conjunctive")
+	@GetMapping("/is-project/conjunctive")
 	@ResponseBody
 	public ResponseEntity<SearchResultResponse> searchAPIconjunctive(@RequestParam(value = "query") String query,
-			@RequestParam(value = "limit", defaultValue = "50") int limit) {
+			@RequestParam(value = "k", defaultValue = "50") int limit) {
 		
 		//TODO: Insert language flag
 		return ResponseEntity.ok().body(searchApi.searchAPIconjunctive(query, limit, null));
 		
 	}
 	
-	@GetMapping("/disjunctive")
+	@GetMapping("/is-project/json")
 	@ResponseBody
 	public ResponseEntity<SearchResultResponse> searchAPIdisjunctive(@RequestParam(value = "query") String query,
-			@RequestParam(value = "limit", defaultValue = "50") int limit) {
+			@RequestParam(value = "k", defaultValue = "50") int limit, @RequestParam(value = "score") int scoringMethod) {
 		
 		//TODO: Insert language flag
 		SearchResultResponse res = searchApi.searchAPIdisjunctive(query, limit, null);

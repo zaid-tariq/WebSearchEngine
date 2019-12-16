@@ -13,12 +13,12 @@ public class GetSearchResults {
 	@Autowired
 	SearchAPI api;
 
-	@RequestMapping("/")
+	@RequestMapping("is-project/")
 	public String helloWorld(Model model) {
 		return "index";
 	}
 	
-	@RequestMapping("/results")
+	@RequestMapping("is-project/results")
 	public String results(Model model, @RequestParam(value = "query") String query,
 			@RequestParam(value = "limit", defaultValue = "20") int limit, @RequestParam(value="lang") String languages) {
 		

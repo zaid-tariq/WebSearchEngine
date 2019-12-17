@@ -133,7 +133,7 @@ public class HTMLParser {
 							: extractedContent.size() - 1);
 			doc.setLanguage(detector.detect(wordsToConsider));
 		}
-
+		
 		// 4. remove all stopwords, stemming and term frequency calculation at the same
 		// time for efficiency
 		// no stemming for german documents
@@ -163,6 +163,8 @@ public class HTMLParser {
 
 		doc.setContent(processedContent);
 		br.close();
+		
+		System.out.println("runned");
 		return doc;
 	}
 

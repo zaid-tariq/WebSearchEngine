@@ -56,7 +56,7 @@ public class CrawlerScheduler implements CommandLineRunner {
 	int numberOfThreadsToSpawn;
 
 	@Override
-	public void run(String... args) throws SQLException, URISyntaxException, IOException, InterruptedException {
+	public void run(String... args) {
 		try {
 			dbc.create();
 

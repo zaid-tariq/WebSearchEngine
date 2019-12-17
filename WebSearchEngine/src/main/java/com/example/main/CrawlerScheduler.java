@@ -5,9 +5,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Date;
@@ -18,6 +21,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.tomcat.util.http.fileupload.FileUtils;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
@@ -25,11 +30,14 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.FileCopyUtils;
 
 import com.example.main.backend.Crawler;
 import com.example.main.backend.DBHandler;
 import com.example.main.backend.DatabaseCreator;
 import com.example.main.backend.utils.Utils;
+
+import ch.qos.logback.core.util.FileUtil;
 
 @Service
 public class CrawlerScheduler implements CommandLineRunner {
@@ -102,7 +110,16 @@ public class CrawlerScheduler implements CommandLineRunner {
 	private void startCrawler() throws IOException, SQLException {
 		File file = null;
 		try {
-			file = new ClassPathResource("seed_urls.txt").getFile();
+			ClassPathResource classPathResource = new ClassPathResource("seed_urls.txt");
+
+			InputStream inputStream = classPathResource.getInputStream();
+			File somethingFile = File.createTempFile("test", ".txt");
+			try {
+				java.nio.file.Files.copy(inputStream, somethingFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			} finally {
+			    IOUtils.closeQuietly(inputStream);
+			}
+			file = somethingFile;
 		} catch (FileNotFoundException ex) {
 			System.out.println("File not found");
 			file = Utils.createTempFileFromInputStream("seed_urls.txt");

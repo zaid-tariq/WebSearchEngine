@@ -90,6 +90,7 @@ public class LanguageDetector {
 				}
 				file = somethingFile;
 			} catch (FileNotFoundException ex) {
+				System.out.println("English counts file not found");
 				file = Utils.createTempFileFromInputStream("english_counts.txt");
 			}
 			BufferedReader r = new BufferedReader(new FileReader(file));
@@ -115,6 +116,7 @@ public class LanguageDetector {
 				}
 				file = somethingFile;
 			} catch (FileNotFoundException ex) {
+				System.out.println("German counts file not found");
 				file = Utils.createTempFileFromInputStream("german_counts.txt");
 			}
 			BufferedReader r = new BufferedReader(new FileReader(file));

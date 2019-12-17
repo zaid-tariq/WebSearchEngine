@@ -5,17 +5,21 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.core.io.ClassPathResource;
 
 import com.example.main.backend.utils.LanguageDetector;
@@ -30,7 +34,16 @@ public class HTMLParser {
 
 		File file = null;
 		try {
-			file = new ClassPathResource("stopwords.txt").getFile();
+			ClassPathResource classPathResource = new ClassPathResource("stopwords.txt");
+
+			InputStream inputStream = classPathResource.getInputStream();
+			File somethingFile = File.createTempFile("test1", ".txt");
+			try {
+				java.nio.file.Files.copy(inputStream, somethingFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+			} finally {
+			    IOUtils.closeQuietly(inputStream);
+			}
+			file = somethingFile;
 		} catch (FileNotFoundException ex) {
 			file = Utils.createTempFileFromInputStream("stopwords.txt");
 		}

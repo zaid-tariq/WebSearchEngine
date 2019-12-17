@@ -5,9 +5,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.core.io.ClassPathResource;
 
 import com.example.main.backend.HTMLDocument;
@@ -76,7 +79,16 @@ public class LanguageDetector {
 			HashMap<String, Integer> m = new HashMap<String, Integer>();
 			File file = null;
 			try {
-				file = new ClassPathResource("english_counts.txt").getFile();
+				ClassPathResource classPathResource = new ClassPathResource("english_counts.txt");
+
+				InputStream inputStream = classPathResource.getInputStream();
+				File somethingFile = File.createTempFile("test2", ".txt");
+				try {
+					java.nio.file.Files.copy(inputStream, somethingFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				} finally {
+				    IOUtils.closeQuietly(inputStream);
+				}
+				file = somethingFile;
 			} catch (FileNotFoundException ex) {
 				file = Utils.createTempFileFromInputStream("english_counts.txt");
 			}
@@ -92,7 +104,16 @@ public class LanguageDetector {
 			HashMap<String, Integer> m = new HashMap<String, Integer>();
 			File file = null;
 			try {
-				file = new ClassPathResource("german_counts.txt").getFile();
+				ClassPathResource classPathResource = new ClassPathResource("german_counts.txt");
+
+				InputStream inputStream = classPathResource.getInputStream();
+				File somethingFile = File.createTempFile("test3", ".txt");
+				try {
+					java.nio.file.Files.copy(inputStream, somethingFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+				} finally {
+				    IOUtils.closeQuietly(inputStream);
+				}
+				file = somethingFile;
 			} catch (FileNotFoundException ex) {
 				file = Utils.createTempFileFromInputStream("german_counts.txt");
 			}

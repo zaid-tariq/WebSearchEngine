@@ -27,7 +27,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import com.example.main.backend.Crawler;
-import com.example.main.backend.CrawlerRunnable;
 import com.example.main.backend.DBHandler;
 import com.example.main.backend.DatabaseCreator;
 import com.example.main.backend.utils.Utils;
@@ -65,7 +64,7 @@ public class CrawlerScheduler implements CommandLineRunner {
 			CrawlerTask task = new CrawlerTask();
 			Timer timer = new Timer(true);
 			timer.scheduleAtFixedRate(task, 1000, TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS));
-			
+			System.out.println("Scheduled crawler!");
 //			
 //			System.out.println("Crawler started");
 //			System.out.println("Following commands are provided:");

@@ -104,6 +104,7 @@ public class CrawlerScheduler implements CommandLineRunner {
 		try {
 			file = new ClassPathResource("seed_urls.txt").getFile();
 		} catch (FileNotFoundException ex) {
+			System.out.println("File not found");
 			file = Utils.createTempFileFromInputStream("seed_urls.txt");
 		}
 

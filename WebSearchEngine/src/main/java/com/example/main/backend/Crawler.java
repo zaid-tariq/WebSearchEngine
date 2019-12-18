@@ -96,7 +96,6 @@ public class Crawler extends Thread {
 	public void run() {
 		try {
 			while (db.getCrawlerFlag()) {
-				System.out.println("I'm crawling");
 				if (maximumNumberOfDocs != crawledDocuments) {
 					Object[] entry = db.getNextURL();
 					if (entry != null && maximumDepth != (int) entry[1]) {

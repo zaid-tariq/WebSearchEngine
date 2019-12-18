@@ -49,7 +49,7 @@ public class HTMLParser {
 		}
 		stopwords = getStopwordsFromFile(file);
 	}
-
+	
 	/**
 	 * Parses a given HTML file defined by the URI
 	 * 
@@ -164,7 +164,6 @@ public class HTMLParser {
 		doc.setContent(processedContent);
 		br.close();
 		
-		System.out.println("runned");
 		return doc;
 	}
 

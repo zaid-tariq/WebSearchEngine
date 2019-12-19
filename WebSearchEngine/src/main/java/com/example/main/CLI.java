@@ -1,36 +1,40 @@
 package com.example.main;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.sql.SQLException;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import com.example.main.backend.DBHandler;
-import com.example.main.backend.DatabaseCreator;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 
 
+@Profile("cli")
 @Component
-public class CLI {
+public class CLI implements CommandLineRunner{
 	
 	@Autowired
-	public static DBHandler handler;
+	DBHandler handler;
+
 	
-	public static void main(String[] args) throws Exception {
-	
+	@Override
+	public void run(String...args) {
 		// @query, @k, @typeOfSearch
 		
-		SearchResultResponse res = null;
-		if(args[2].equals("conjunctive"))
-			res = handler.searchConjunctiveQuery(args[0], Integer.parseInt(args[1]), new String[] {"english","german"}, null);
-		else if(args[2].equals("disjunctive"))
-			res = handler.searchDisjunctiveQuery(args[0], Integer.parseInt(args[1]),  new String[] {"english","german"}, null, 3);
-		else
-			throw new Exception("Choose either conjunctive or disjunctive query method");
+		System.out.println(handler == null);
 			
-		
-		res.printResult();	
+		try {
+			SearchResultResponse res = null;
+			if(args[2].equals("conjunctive"))
+				res = handler.searchConjunctiveQuery(args[0], Integer.parseInt(args[1]), new String[] {"english","german"}, null);
+			else if(args[2].equals("disjunctive"))
+				res = handler.searchDisjunctiveQuery(args[0], Integer.parseInt(args[1]),  new String[] {"english","german"}, null, 3);
+			else
+				throw new Exception("Choose either conjunctive or disjunctive query method");
+			
+			res.printResult();	
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
 	}
 }

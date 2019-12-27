@@ -164,7 +164,6 @@ public class HTMLParser {
 		doc.setContent(processedContent);
 		br.close();
 		
-		System.out.println("runned");
 		return doc;
 	}
 

@@ -60,41 +60,11 @@ public class CrawlerScheduler implements CommandLineRunner {
 	public void run(String... args) {
 		try {
 			dbc.create();
-
 			
 			CrawlerTask task = new CrawlerTask();
 			Timer timer = new Timer(true);
 			timer.scheduleAtFixedRate(task, 1000, TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS));
 			System.out.println("Scheduled crawler!");
-//			
-//			System.out.println("Crawler started");
-//			System.out.println("Following commands are provided:");
-//			System.out.println("stop - stops the crawler");
-//			System.out.println("restart - restarts the crawler");
-//			System.out.println("stop completely - stops the crawler and terminates this command line");
-//			Scanner reader = new Scanner(System.in);
-//			boolean wait = true;
-//			while (wait) {
-//				String input = reader.nextLine();
-//				switch (input.toLowerCase()) {
-//				case "stop":
-//					dbh.setCrawlerFlag(false);
-//					System.out.println("Stopped the crawler");
-//					break;
-//				case "restart":
-//					startCrawler();
-//					System.out.println("Restarted the crawler");
-//					break;
-//				case "stop completely":
-//					System.out.println("Terminated");
-//					dbh.setCrawlerFlag(false);
-//					wait = false;
-//					break;
-//				default:
-//					break;
-//				}
-//			}
-//			reader.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

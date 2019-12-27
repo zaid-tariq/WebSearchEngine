@@ -61,8 +61,6 @@ public class LanguageDetector {
 			probabilityGerman *= getProbability(Language.GERMAN, w.toLowerCase());
 			probabilityEnglish *= getProbability(Language.ENGLISH, w.toLowerCase());
 		}
-
-		System.out.println("Probabilities: "+probabilityGerman+ " "+probabilityEnglish);
 		
 		return probabilityEnglish > probabilityGerman ? Language.ENGLISH : Language.GERMAN;
 	}

@@ -19,7 +19,6 @@ public class DatabaseCreator {
 
 			// CREATE TABLE IF NOT EXISTS s by DDL statements
 			createExtensionLevenshtein(connection);
-			//createExtensionTrigram(connection);
 			createDocumentsTable(connection);
 			createFeatureTable(connection);
 			createViewsOnFeaturesTable(connection);
@@ -52,13 +51,6 @@ public class DatabaseCreator {
 	
 	private void createExtensionLevenshtein(Connection connection) throws SQLException {
 		String query = "CREATE EXTENSION IF NOT EXISTS fuzzystrmatch";
-		Statement statement = connection.createStatement();
-		statement.execute(query);
-		statement.close();
-	}
-	
-	private void createExtensionTrigram(Connection connection) throws SQLException {
-		String query = "CREATE EXTENSION IF NOT EXISTS pg_trgm2";
 		Statement statement = connection.createStatement();
 		statement.execute(query);
 		statement.close();

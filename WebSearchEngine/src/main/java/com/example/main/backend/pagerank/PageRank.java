@@ -2,10 +2,7 @@ package com.example.main.backend.pagerank;
 
 import org.la4j.Vector;
 import org.la4j.matrix.SparseMatrix;
-import org.la4j.vector.DenseVector;
 import org.la4j.vector.SparseVector;
-import org.la4j.vector.functor.VectorPredicate;
-import org.la4j.vector.sparse.CompressedVector;
 
 public class PageRank {
 
@@ -13,13 +10,15 @@ public class PageRank {
 	private SparseMatrix transitionMatrix;
 	private double terminationCriteria;
 	private double randomJumpProbability;
+	private int maximumIterations;
 
 	private PageRank(Builder builder) {
 		this.randomJumpProbability = builder.randomJumpProbability;
 		this.terminationCriteria = builder.terminationCriteria;
 		this.transitionMatrix = builder.transitionMatrix;
+		this.maximumIterations = builder.maximumIterations;
 		this.stationaryDistribution = computeWithPowerIterationMethod(this.transitionMatrix, randomJumpProbability,
-				terminationCriteria);
+				terminationCriteria, maximumIterations);
 	}
 
 	public Vector getStationaryDistribution() {
@@ -37,16 +36,21 @@ public class PageRank {
 	public double getRandomJumpProbability() {
 		return randomJumpProbability;
 	}
+	
+	public int getMaximumIterations() {
+		return maximumIterations;
+	}
 
 	private Vector computeWithPowerIterationMethod(SparseMatrix transitionMatrix, double randomJumpProbability,
-			double terminationCriteria) {
+			double terminationCriteria, int maximumIterations) {
 		SparseMatrix p = (SparseMatrix) transitionMatrix.multiply(1 - randomJumpProbability).add(SparseMatrix
 				.constant(transitionMatrix.rows(), transitionMatrix.columns(), ((double) 1) / transitionMatrix.rows())
 				.multiply(transitionMatrix));
 		Vector v = SparseVector.constant(p.rows(), ((double) 1) / p.rows());
 		Vector b = SparseVector.constant(p.rows(), Double.MIN_VALUE);
 
-		while (v.subtract(b).sum() >= terminationCriteria) {
+		int iteration = 0;
+		while (iteration < maximumIterations && v.subtract(b).sum() >= terminationCriteria) {
 			b = v;
 			v = v.multiply(transitionMatrix);
 		}
@@ -58,6 +62,7 @@ public class PageRank {
 		private SparseMatrix transitionMatrix;
 		private double randomJumpProbability = -1;
 		private double terminationCriteria = -1;
+		private int maximumIterations = 100;
 
 		public Builder() {
 
@@ -75,6 +80,11 @@ public class PageRank {
 
 		public Builder withTerminationCriteria(double value) {
 			this.terminationCriteria = value;
+			return this;
+		}
+		
+		public Builder withMaximumIterations(int iterations) {
+			this.maximumIterations = iterations;
 			return this;
 		}
 

@@ -22,7 +22,7 @@ public class GetSearchResults {
 	public String results(Model model, @RequestParam(value = "query") String query,
 			@RequestParam(value = "limit", defaultValue = "20") int limit, @RequestParam(value="lang") String languages) {
 		
-		model.addAttribute("results", api.searchAPIdisjunctive(query, limit, languages.split(" "), 3).resultList);
+		model.addAttribute("results", api.searchAPIdisjunctive(query, limit, languages.split(" "), 1).resultList);
 		model.addAttribute("didYouMean", api.getDidYouMeanQuery(query));
 		return "results";
 	}

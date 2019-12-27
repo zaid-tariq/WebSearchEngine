@@ -122,7 +122,6 @@ public class SearchAPI {
 		try {
 			db.computePageRank(0.1,0.001);
 			db.updateScores();
-
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		} catch (Exception ex) {

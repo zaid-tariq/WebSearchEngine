@@ -7,38 +7,31 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashSet;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.FileCopyUtils;
 
 import com.example.main.backend.Crawler;
 import com.example.main.backend.DBHandler;
 import com.example.main.backend.DatabaseCreator;
 import com.example.main.backend.utils.Utils;
 
-import ch.qos.logback.core.util.FileUtil;
-
+@Profile("crawler")
 @Service
 public class CrawlerScheduler implements CommandLineRunner {
 
@@ -67,41 +60,11 @@ public class CrawlerScheduler implements CommandLineRunner {
 	public void run(String... args) {
 		try {
 			dbc.create();
-
 			
 			CrawlerTask task = new CrawlerTask();
 			Timer timer = new Timer(true);
 			timer.scheduleAtFixedRate(task, 1000, TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS));
 			System.out.println("Scheduled crawler!");
-//			
-//			System.out.println("Crawler started");
-//			System.out.println("Following commands are provided:");
-//			System.out.println("stop - stops the crawler");
-//			System.out.println("restart - restarts the crawler");
-//			System.out.println("stop completely - stops the crawler and terminates this command line");
-//			Scanner reader = new Scanner(System.in);
-//			boolean wait = true;
-//			while (wait) {
-//				String input = reader.nextLine();
-//				switch (input.toLowerCase()) {
-//				case "stop":
-//					dbh.setCrawlerFlag(false);
-//					System.out.println("Stopped the crawler");
-//					break;
-//				case "restart":
-//					startCrawler();
-//					System.out.println("Restarted the crawler");
-//					break;
-//				case "stop completely":
-//					System.out.println("Terminated");
-//					dbh.setCrawlerFlag(false);
-//					wait = false;
-//					break;
-//				default:
-//					break;
-//				}
-//			}
-//			reader.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

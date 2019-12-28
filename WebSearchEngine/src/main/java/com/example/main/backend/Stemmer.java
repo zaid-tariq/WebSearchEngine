@@ -571,6 +571,7 @@ class Stemmer {
 		Stemmer s = new Stemmer();
 		for (int i = 0; i < args.length; i++)
 			try {
+				@SuppressWarnings("resource")
 				FileInputStream in = new FileInputStream(args[i]);
 
 				try {

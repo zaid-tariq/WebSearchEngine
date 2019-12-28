@@ -15,10 +15,6 @@ public class IndexingThread extends Thread {
 	@Autowired
 	SearchAPI api;
 
-	/**
-	 *
-	 * @param seconds time to sleep till the next computation of tf idf scores
-	 */
 	public IndexingThread() {
 		this.setDaemon(true);
 	}
@@ -29,7 +25,7 @@ public class IndexingThread extends Thread {
 			while (true) {
 				api.updateScores();
 				IndexingThread.sleep(sleepSeconds);
-				System.out.println("update scores");
+				//System.out.println("update scores");
 			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();

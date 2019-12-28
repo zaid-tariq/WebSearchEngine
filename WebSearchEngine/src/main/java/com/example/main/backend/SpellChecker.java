@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 
 public class SpellChecker {
 
@@ -35,10 +34,8 @@ public class SpellChecker {
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		while (results.next()) {
-
 			String term = results.getString(1);
 			String relatedTerm = results.getString(2);
-			System.out.println("Related Term: " + relatedTerm);
 			int dist = results.getInt(3);
 			if (!relatedTerms.containsKey(term))
 				relatedTerms.put(term, new ArrayList<Map.Entry<String, Integer>>());
@@ -59,7 +56,7 @@ public class SpellChecker {
 		for (String qTerm : a_origQueryTerms) {
 			for (Map.Entry<String, Integer> relatedTerm : a_query_and_related_terms.get(qTerm)) {
 				for(Map.Entry<String,Integer> query : queries) {
-					newQueries.add(new AbstractMap.SimpleEntry<String,Integer>(query.getKey() +" "+ relatedTerm.getKey(), query.getValue()+relatedTerm.getValue()));
+					newQueries.add(new AbstractMap.SimpleEntry<String,Integer>((query.getKey() +" "+ relatedTerm.getKey()).trim(), query.getValue()+relatedTerm.getValue()));
 				}
 			}
 			queries = newQueries;
@@ -67,7 +64,6 @@ public class SpellChecker {
 		}
 		Map.Entry<String,Integer> best = null;
 		for(Map.Entry<String,Integer> q : queries) {
-			System.out.println(q.getKey()+ " "+q.getValue());
 			if(best == null || best.getValue() > q.getValue()) {
 				best = q;
 			}
@@ -75,65 +71,4 @@ public class SpellChecker {
 		
 		return best.getKey();
 	}
-
-	private List<List<String>> findAllPermutations(List<String> a_origQueryTerms,
-			List<List<String>> a_related_query_terms) {
-
-		List<List<String>> permutations = new ArrayList<List<String>>();
-		List<List<String>> processQueue = new ArrayList<List<String>>();
-		processQueue.add(a_origQueryTerms);
-		permutations.add(a_origQueryTerms);
-
-		for (int level = 0; level < a_origQueryTerms.size(); level++) {
-			processQueue = findPermutationsForGivenLevel(permutations, processQueue, level, a_origQueryTerms.size(),
-					a_related_query_terms);
-		}
-		return permutations;
-	}
-
-	private List<List<String>> findPermutationsForGivenLevel(List<List<String>> permutations,
-			List<List<String>> processQueue, int level, int size_of_query, List<List<String>> a_related_query_terms) {
-
-		int start_index = level;
-		int end_index = size_of_query;
-		List<List<String>> newProcessQueue = new ArrayList<List<String>>();
-		for (List<String> query : processQueue) {
-			for (int index_to_change = start_index; index_to_change < end_index; index_to_change++) {
-				List<List<String>> alternative_queries = getAllPermutationsAtaSpecificIndexForAGivenBaseQuery(query,
-						index_to_change, a_related_query_terms.get(index_to_change));
-				permutations.addAll(alternative_queries);
-				newProcessQueue.addAll(alternative_queries);
-			}
-		}
-
-		return newProcessQueue;
-	}
-
-	private List<List<String>> getAllPermutationsAtaSpecificIndexForAGivenBaseQuery(List<String> baseQuery,
-			int index_to_permute, List<String> all_possible_values_at_index) {
-
-		List<List<String>> res = new ArrayList<List<String>>();
-		for (String val : all_possible_values_at_index) {
-			List<String> new_alt_query = new ArrayList<String>(baseQuery);
-			new_alt_query.set(index_to_permute, val);
-			res.add(new_alt_query);
-		}
-
-		return res;
-	}
-
-	private List<String> getAllPairsOfTermsInQuery(List<String> terms) {
-
-		List<String> combs = new ArrayList<String>();
-		for (int i = 0; i < terms.size(); i++) {
-			String pivot_term = terms.get(i);
-			for (int j = i + 1; j < terms.size(); j++) {
-				String second_term = terms.get(j);
-				combs.add(pivot_term + ":" + second_term);
-			}
-
-		}
-		return combs;
-	}
-
 }

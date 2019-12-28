@@ -8,17 +8,16 @@
 Checkout the project repository. Build using Maven.<br/>
 `mvn clean package -Dmaven.test.skip=true     `
 <br/>
-Use the following command to run the user facing interface (web app).<br/>
-`java -jar target/WebSearchEngine-0.0.1-SNAPSHOT.jar`
-<br/>
-Use the following command to run the Crawler<br/>
-`java -cp target/WebSearchEngine-0.0.1-SNAPSHOT.jar -Dloader.main=com.example.main.CrawlerScheduler org.springframework.boot.loader.PropertiesLauncher @max_depth @max_doc @leaf_domain_boolean @numberOfThreadsToSpawn`
-<br/>
-Use the following program to run the Task3-CLI<br/>
-`java -cp target/ WebSearchEngine-0.0.1-SNAPSHOT.jar -Dloader.main=com.example.main.CLI org.springframework.boot.loader.PropertiesLauncher @jdbc_url @user @pass @query @k @typeOfSearch`
-<br/>
-Use the following to run the Indexing scheduler.<br/>
-`java -cp target/WebSearchEngine-0.0.1-SNAPSHOT.jar -Dloader.main=com.example.main.CLIIndexing org.springframework.boot.loader.PropertiesLauncher @numberOfMilliseconds`
+Use the following command to run the specific part of the project:
+`mvn spring-boot:run -Dspring-boot.run.profiles=#profiles`
+
+Replace `#profiles` by any of the arguments shown in the table below. If you want to run multiple profiles at a time just list them comma separated. We recommend to run every profile of the project in it's own process because you can then start and stop any part without killing the other parts.
+
+| Command | Description |
+|---------|-------------|
+|crawler  | Runs the crawler|
+|indexer  | Runs the indexer. Note that you need to pass the arguments in the same command. See section 'CLI to schedule task' for further information.|
+|cli     | Runs the command line. Note that you need to pass the arguments in the same command. See section 'Task3, CLI' for further information about parameters etc. |
 
 ## Usage instructions
 
@@ -34,14 +33,6 @@ You can set there the following properties:
 |**crawler.max_docs**| maximum number of docs|
 |**crawler.leave_domain_boolean**| flag that indicates to search only in the provided domains|
 |**crawler.numberOfThreadsToSpawn**| number of threads to spawn|
-
-The program provides you then with the following commands to interact with the crawler:
-
-|     Command        | Description |
-|--------------------|-------------|
-|**stop**| stops the crawler if it is not already terminated|
-|**restart**| restarts the crawler with the automatically saved instance state|
-|**stop completely**| stops the crawler if it is not already terminated and terminates the command line interface|
 
 ### Connection
 Edit relevant properties in the application.properties file which is located in the same resources folder as above.
@@ -64,14 +55,17 @@ spring.datasource.password=postgres
 For the CLI requested in task 3, use the interface in `src/main/java/com/example/main/CLI`. 
 
 Arguments are the following:
-@jdbc url, @user, @pass, @query, @k, @typeOfSearch (conjunctive or disjunctive)
+@query, @k, @typeOfSearch (conjunctive or disjunctive)
 
 ### CLI to schedule task for tf_idf score update in DB
 It starts a daemon thread to refresh the tf_idf scores in the DB after some interval
 Path: `src/main/java/com/example/main/CLIIndexing`
 
 Arguments:
-size of interval in milliseconds
+
+|Property Name| Description|
+|-------------|------------|
+|indexing.interval.milliseconds| Time between two indexing processes|
 
 ##Going live!
 The web interface is accessible at:

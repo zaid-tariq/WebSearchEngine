@@ -42,7 +42,6 @@ public class Utils {
 				term = term.trim();
 				if (term.length() > 0) {
 					searchTerms.add(term);
-					System.out.println(term);
 				}
 			}
 		}

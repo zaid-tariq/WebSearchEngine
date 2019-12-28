@@ -19,7 +19,6 @@ public class DatabaseCreator {
 
 			// CREATE TABLE IF NOT EXISTS s by DDL statements
 			createExtensionLevenshtein(connection);
-			//createExtensionTrigram(connection);
 			createDocumentsTable(connection);
 			createFeatureTable(connection);
 			createViewsOnFeaturesTable(connection);
@@ -56,18 +55,11 @@ public class DatabaseCreator {
 		statement.execute(query);
 		statement.close();
 	}
-	
-	private void createExtensionTrigram(Connection connection) throws SQLException {
-		String query = "CREATE EXTENSION IF NOT EXISTS pg_trgm2";
-		Statement statement = connection.createStatement();
-		statement.execute(query);
-		statement.close();
-	}
 
 	private void createFunctionConjunctive_search(Connection connection) throws SQLException {
 		String query = 
 		"CREATE OR REPLACE FUNCTION get_docs_for_conjunctive_search(search_terms text[], lang TEXT[])"
-		+ "    	RETURNS TABLE(docurl text, term text, tfidf real, okapi real)" 
+		+ "    	RETURNS TABLE(docurl text, term text, tfidf real, okapi real, combined real)" 
 		+ "    	LANGUAGE 'plpgsql'"
 		+ "		AS $$"
 				+ " BEGIN" + 
@@ -84,11 +76,11 @@ public class DatabaseCreator {
 				"		 							EXCEPT SELECT unnest(array_agg(f1.term))				" + 
 				"		 							)					" + 
 				"		 						)				" + 
-				" 		 				SELECT d.url, f.term, f.score_tfidf, f.score_okapi" + 
+				" 		 				SELECT d.url, f.term, f.score_tfidf, f.score_okapi, f.score_combined" + 
 				" 		 				from features f, filtered_docs fd, documents d				" + 
 				" 		 				WHERE 	f.docid = fd.docid 						" + 
 				" 		 				AND f.docid = d.docid"
-				+ "						AND d.language = ANY(lang)			" + 
+				+ "						AND d.language = ANY(lang) "+
 				" 		 				ORDER BY d.docid;	" + 
 				" 		 END; $$;";
 		Statement statement = connection.createStatement();
@@ -101,7 +93,7 @@ public class DatabaseCreator {
 	private void createFunctionDisjunctive_search(Connection connection) throws SQLException {
 		String query = 
 				"CREATE OR REPLACE FUNCTION get_docs_for_disjunctive_search(search_terms text[], required_terms text[], lang TEXT[])"
-				+ "    	RETURNS TABLE(docurl text, term text, tfidf real, okapi real)" 
+				+ "    	RETURNS TABLE(docurl text, term text, tfidf real, okapi real, combined real)" 
 				+ "    	LANGUAGE 'plpgsql'"
 				+ "		AS $$" +
 						" BEGIN" + 
@@ -126,7 +118,7 @@ public class DatabaseCreator {
 						"		 							SELECT unnest(array_agg(f1.term))" + 
 						"		 						)			" + 
 						" 							)					" + 
-						" 						SELECT d.url, f.term, f.score_tfidf, f.score_okapi" + 
+						" 						SELECT d.url, f.term, f.score_tfidf, f.score_okapi, f.score_combined" + 
 						" 		 				from features f, filtered_docs_keywords fd, documents d				" + 
 						" 		 				WHERE 	f.docid = fd.docid 						" + 
 						" 		 				AND f.docid = d.docid"

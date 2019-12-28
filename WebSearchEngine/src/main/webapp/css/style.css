@@ -10,3 +10,7 @@
 .active {
 	background-color:#006A99 !important;
 }
+
+.capitalize{
+	text-transform: capitalize;
+}

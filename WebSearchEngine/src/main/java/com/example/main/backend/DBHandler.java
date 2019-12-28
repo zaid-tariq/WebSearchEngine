@@ -3,24 +3,27 @@ package com.example.main.backend;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.sql.*;
+import java.sql.Array;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.Map.Entry;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Set;
+
 import javax.sql.DataSource;
 
 import org.la4j.Vector;
 import org.la4j.matrix.SparseMatrix;
-import org.la4j.vector.DenseVector;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
+
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.dao.DBResponseDocument;
 import com.example.main.backend.pagerank.PageRank;
@@ -82,11 +85,14 @@ public class DBHandler {
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		searchTerms.addAll(requiredTerms); // combine all terms
-		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, scoringMethod); // closes connection too
+		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, scoringMethod); // closes
+																											// connection
+																											// too
 	}
 
 	private SearchResultResponse processSearchQueryResultSet(Connection con, ResultSet results,
-			List<String> searchTerms,int k_limit, SearchResultResponse a_response, int scoringMethod) throws SQLException {
+			List<String> searchTerms, int k_limit, SearchResultResponse a_response, int scoringMethod)
+			throws SQLException {
 
 		HashMap<String, DBResponseDocument> resDocs = new HashMap<String, DBResponseDocument>();
 
@@ -105,14 +111,16 @@ public class DBHandler {
 		con.close();
 
 		DBResponseDocument queryDoc = new DBResponseDocument(null);
+		//queryDoc.scoringMethod = scoringMethod;
 
-		for (String t : searchTerms)
+		for (String t : searchTerms) {
 			queryDoc.add_term(t, 1, 1);
+		}
 
 		ArrayList<DBResponseDocument> sortedSet = new ArrayList<DBResponseDocument>();
 		for (String key : resDocs.keySet()) {
 			DBResponseDocument doc = resDocs.get(key);
-			queryDoc.calculateCosineSimilarity(doc);
+			doc.calculateCosineSimilarity(queryDoc);
 			sortedSet.add(doc);
 		}
 
@@ -123,10 +131,10 @@ public class DBHandler {
 			a_response = new SearchResultResponse();
 		for (DBResponseDocument resDoc : sortedSet) {
 			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.getCosSimScore());
-			if(rank >= k_limit)
+			if (rank > k_limit)
 				break;
 		}
-			
+
 		return a_response;
 	}
 
@@ -330,6 +338,7 @@ public class DBHandler {
 		stmtUpdateDoc.setString(1, doc.getLanguage());
 		stmtUpdateDoc.setString(2, doc.getUrl().toString());
 		stmtUpdateDoc.executeUpdate();
+		stmtUpdateDoc.close();
 
 		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
 		stmtgetDocId.setString(1, doc.getUrl().toString());
@@ -355,15 +364,19 @@ public class DBHandler {
 			setNumberOfTerms.setInt(1, doc.getTermFrequencies().entrySet().size());
 			setNumberOfTerms.setInt(2, docId);
 			setNumberOfTerms.executeUpdate();
+			setNumberOfTerms.close();
 
 			// Insert blank documents
-			PreparedStatement stmtInsertBlankDocument = con.prepareStatement(
-					"INSERT INTO documents (docid, url, crawled_on_date, language, page_rank) VALUES (DEFAULT, ?, NULL, NULL, NULL) ON CONFLICT DO NOTHING");
-			for (URL url : doc.getLinks()) {
-				stmtInsertBlankDocument.setString(1, url.toString());
-				stmtInsertBlankDocument.addBatch();
+
+			synchronized (DBHandler.class) {
+				PreparedStatement stmtInsertBlankDocument = con.prepareStatement(
+						"INSERT INTO documents (docid, url, crawled_on_date, language, page_rank) VALUES (DEFAULT, ?, NULL, NULL, NULL) ON CONFLICT DO NOTHING");
+				for (URL url : doc.getLinks()) {
+					stmtInsertBlankDocument.setString(1, url.toString());
+					stmtInsertBlankDocument.executeUpdate();
+				}
+				stmtInsertBlankDocument.close();
 			}
-			stmtInsertBlankDocument.executeBatch();
 
 			List<Integer> docKeys = new ArrayList<>();
 			PreparedStatement stmtDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
@@ -375,7 +388,9 @@ public class DBHandler {
 				if (set.next()) {
 					docKeys.add(set.getInt(1));
 				}
+				set.close();
 			}
+			stmtDocId.close();
 
 			// Insert outgoing links
 			PreparedStatement stmtInsertLinks = con
@@ -386,11 +401,10 @@ public class DBHandler {
 				stmtInsertLinks.addBatch();
 			}
 			stmtInsertLinks.executeBatch();
-			stmtInsertBlankDocument.close();
 			stmtInsertLinks.close();
 		}
-
-		stmtUpdateDoc.close();
+		key.close();
+		stmtgetDocId.close();
 	}
 
 	public void insertURLToVisited(URL url, Connection con) throws SQLException, MalformedURLException {
@@ -579,7 +593,7 @@ public class DBHandler {
 			this.setPageRank(docIds.get(x), pageRanks.get(x));
 		}
 
-		System.out.println("PageRank computed");
+		//System.out.println("PageRank computed");
 	}
 
 	public void setPageRank(int docId, double pagerank) throws SQLException {

@@ -9,14 +9,24 @@
 	</head>
 	<body class="position-relative">
 		<div class="position-absolute" style="top:1em;right:1em">
-			<div class="btn-group dropleft">
-			  	<button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-			    	English
+			<div class="btn-group">
+				<button type="button" class="btn btn-primary btn-sm dropdown-toggle scoring-method" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+				   	${param.scoringMethod == 1 ? 'TF*IDF' : (param.scoringMethod == 2 ? 'BM25' : 'Combined Score')}
+				</button>
+				<div class="dropdown-menu dropdown-menu-scoring-method dropdown-menu-right">
+				    <a class="dropdown-item ${param.scoringMethod == 1 ? 'active' : ''}" href="#" value="1">TF*IDF</a>
+		  			<a class="dropdown-item ${param.scoringMethod == 2 ? 'active' : ''}" href="#" value="2">BM25</a>
+		  			<a class="dropdown-item ${param.scoringMethod == 3 ? 'active' : ''}" href="#" value="3">Combined Score</a>
+				</div>
+			</div>
+			<div class="btn-group">
+			  	<button type="button" class="btn btn-primary btn-sm dropdown-toggle language ${param.lang != 'english' && param.lang != 'german' ? '' : 'capitalize'}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+			    	${param.lang != 'english' && param.lang != 'german' ? 'No matter' : param.lang}
 			  	</button>
-			  	<div class="dropdown-menu">
-			    	<a class="dropdown-item active" href="#">English</a>
-	  				<a class="dropdown-item" href="#">German</a>
-	  				<a class="dropdown-item" href="#">No matter</a>
+			  	<div class="dropdown-menu dropdown-menu-language dropdown-menu-right">
+			    	<a class="dropdown-item ${param.lang == 'english' ? 'active' : ''}" href="#">English</a>
+	  				<a class="dropdown-item ${param.lang == 'german' ? 'active' : ''}" href="#">German</a>
+	  				<a class="dropdown-item ${param.lang != 'english' && param.lang != 'german' ? 'active' : ''}" href="#">No matter</a>
 			  	</div>
 			</div>
 		</div>
@@ -33,6 +43,7 @@
 	                        	<input class="form-control" type="text" name="query">
 	                    	</div>
 	                    	<input type="hidden" class="inputLanguage" name="lang" value="english">
+	                    	<input type="hidden" class="scoringMethod" name="scoringMethod" value="3">
 	                    	<input type="submit" class="btn btn-primary" style="background-color:#006A99;border-color:#047699" value="Suchen">
 	               	 	</form>
 	            	</div>
@@ -45,6 +56,7 @@
 						<i>
 							Did you mean: <input class="btn btn-link" type="submit" value="${didYouMean}">  ?
 							<input type="hidden" class="inputLanguage" name="lang" value="english">
+	                    	<input type="hidden" class="scoringMethod" name="scoringMethod" value="3">
 		            	</i>
 					</c:if>
 		        </form>
@@ -75,5 +87,6 @@
 	            crossorigin="anonymous"></script>
 	    <script src="../js/results.js"></script>
 	    <script src="../js/languageDropdown.js"></script>
+	    <script src="../js/scoringDropdown.js"></script>
 	</body>
 </html>

@@ -67,7 +67,7 @@ public class Crawler extends Thread {
 		if (db.firstStartupCrawler()) {
 			db.queueURLs(new HashSet<URL>(urls));
 		}
-		db.insertCrawlerStateIfNotExists(maximumDepth, maximumNumberOfDocs, 0, leaveDomain, parallelism, true,
+		db.insertCrawlerStateIfNotExists(maximumDepth, maximumNumberOfDocs, 0, leaveDomain, parallelism, false,
 				fromLinkedList(new ArrayList<URL>(urls)));
 	}
 

@@ -63,8 +63,9 @@ public class DBResponseDocument {
 		else
 			this.cosSim = dotProd / normProd;
 
-		if (this.scoringMethod == 3)
+		if (this.scoringMethod == 3) {
 			this.cosSim = this.calculateCombinedScore();
+		}
 	}
 
 	private float getScore(Scores score) {

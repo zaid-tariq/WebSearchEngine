@@ -111,6 +111,7 @@ public class DBHandler {
 		con.close();
 
 		DBResponseDocument queryDoc = new DBResponseDocument(null);
+		//queryDoc.scoringMethod = scoringMethod;
 
 		for (String t : searchTerms) {
 			queryDoc.add_term(t, 1, 1);
@@ -119,7 +120,7 @@ public class DBHandler {
 		ArrayList<DBResponseDocument> sortedSet = new ArrayList<DBResponseDocument>();
 		for (String key : resDocs.keySet()) {
 			DBResponseDocument doc = resDocs.get(key);
-			queryDoc.calculateCosineSimilarity(doc);
+			doc.calculateCosineSimilarity(queryDoc);
 			sortedSet.add(doc);
 		}
 

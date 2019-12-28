@@ -112,8 +112,9 @@ public class DBHandler {
 
 		DBResponseDocument queryDoc = new DBResponseDocument(null);
 
-		for (String t : searchTerms)
+		for (String t : searchTerms) {
 			queryDoc.add_term(t, 1, 1);
+		}
 
 		ArrayList<DBResponseDocument> sortedSet = new ArrayList<DBResponseDocument>();
 		for (String key : resDocs.keySet()) {
@@ -129,7 +130,7 @@ public class DBHandler {
 			a_response = new SearchResultResponse();
 		for (DBResponseDocument resDoc : sortedSet) {
 			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.getCosSimScore());
-			if (rank >= k_limit)
+			if (rank > k_limit)
 				break;
 		}
 

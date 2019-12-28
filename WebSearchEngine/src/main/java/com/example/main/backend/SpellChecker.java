@@ -34,10 +34,8 @@ public class SpellChecker {
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		while (results.next()) {
-
 			String term = results.getString(1);
 			String relatedTerm = results.getString(2);
-			System.out.println("Related Term: " + relatedTerm);
 			int dist = results.getInt(3);
 			if (!relatedTerms.containsKey(term))
 				relatedTerms.put(term, new ArrayList<Map.Entry<String, Integer>>());
@@ -58,7 +56,7 @@ public class SpellChecker {
 		for (String qTerm : a_origQueryTerms) {
 			for (Map.Entry<String, Integer> relatedTerm : a_query_and_related_terms.get(qTerm)) {
 				for(Map.Entry<String,Integer> query : queries) {
-					newQueries.add(new AbstractMap.SimpleEntry<String,Integer>(query.getKey() +" "+ relatedTerm.getKey(), query.getValue()+relatedTerm.getValue()));
+					newQueries.add(new AbstractMap.SimpleEntry<String,Integer>((query.getKey() +" "+ relatedTerm.getKey()).trim(), query.getValue()+relatedTerm.getValue()));
 				}
 			}
 			queries = newQueries;
@@ -66,7 +64,6 @@ public class SpellChecker {
 		}
 		Map.Entry<String,Integer> best = null;
 		for(Map.Entry<String,Integer> q : queries) {
-			System.out.println(q.getKey()+ " "+q.getValue());
 			if(best == null || best.getValue() > q.getValue()) {
 				best = q;
 			}

@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import com.example.main.backend.DBHandler;
 import com.example.main.backend.SpellChecker;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
-import com.example.main.backend.api.responseObjects.SearchResultResponse.SearchResultItem;
 import com.example.main.backend.utils.Utils;
 
 @Component

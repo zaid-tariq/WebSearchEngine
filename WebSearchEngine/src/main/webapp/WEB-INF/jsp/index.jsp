@@ -12,11 +12,21 @@
 <body class="h-100">
 <div class="container-fluid h-100 position-relative">
 	<div class="position-absolute" style="top:1em;right:1em">
-		<div class="btn-group dropleft">
-		  	<button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+		<div class="btn-group">
+			<button type="button" class="btn btn-primary btn-sm dropdown-toggle scoring-method" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+			   	Combined Score
+			</button>
+			<div class="dropdown-menu dropdown-menu-scoring-method dropdown-menu-right">
+			    <a class="dropdown-item" href="#" value="1">TF*IDF</a>
+	  			<a class="dropdown-item" href="#" value="2">BM25</a>
+	  			<a class="dropdown-item active" href="#" value="3">Combined Score</a>
+			</div>
+		</div>
+		<div class="btn-group">
+		  	<button type="button" class="btn btn-primary btn-sm dropdown-toggle language" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 		    	English
 		  	</button>
-		  	<div class="dropdown-menu">
+		  	<div class="dropdown-menu dropdown-menu-language dropdown-menu-right">
 		    	<a class="dropdown-item active" href="#">English</a>
   				<a class="dropdown-item" href="#">German</a>
   				<a class="dropdown-item" href="#">No matter</a>
@@ -36,6 +46,7 @@
                         <input class="form-control" type="text" name="query">
                     </div>
                     <input type="hidden" class="inputLanguage" name="lang" value="english">
+                    <input type="hidden" class="scoringMethod" name="scoringMethod" value="3">
                     <input type="submit" class="btn btn-primary" value="Suchen">
                 </form>
             </div>
@@ -49,6 +60,7 @@
             integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
             crossorigin="anonymous"></script>
     <script src="../js/languageDropdown.js"></script>
+    <script src="../js/scoringDropdown.js"></script>
 </div>
 </body>
 </html>

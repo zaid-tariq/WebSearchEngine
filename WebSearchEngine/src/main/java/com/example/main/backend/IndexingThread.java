@@ -25,7 +25,7 @@ public class IndexingThread extends Thread {
 			while (true) {
 				api.updateScores();
 				IndexingThread.sleep(sleepSeconds);
-				System.out.println("update scores");
+				//System.out.println("update scores");
 			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();

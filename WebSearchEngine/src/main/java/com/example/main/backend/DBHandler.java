@@ -593,7 +593,7 @@ public class DBHandler {
 			this.setPageRank(docIds.get(x), pageRanks.get(x));
 		}
 
-		System.out.println("PageRank computed");
+		//System.out.println("PageRank computed");
 	}
 
 	public void setPageRank(int docId, double pagerank) throws SQLException {

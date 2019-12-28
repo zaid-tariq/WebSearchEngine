@@ -36,6 +36,7 @@ public class CrawlerRunnable implements Runnable {
 				db.insertDocDataToDatabase(doc, con);
 				db.insertURLSToQueue(doc.getLinks(), depth, con);
 				db.insertURLToVisited(doc.getUrl(), con);
+				
 
 				con.commit();
 			}

@@ -66,9 +66,6 @@ public class Crawler extends Thread {
 
 		if (db.firstStartupCrawler()) {
 			db.queueURLs(new HashSet<URL>(urls));
-			db.setCrawlerFlag(true);
-		} else {
-			db.setCrawlerFlag(true);
 		}
 		db.insertCrawlerStateIfNotExists(maximumDepth, maximumNumberOfDocs, 0, leaveDomain, parallelism, true,
 				fromLinkedList(new ArrayList<URL>(urls)));
@@ -86,12 +83,15 @@ public class Crawler extends Thread {
 				this.parallelism = (int) saveState[4];
 				this.urls = fromStringArray((String[]) saveState[6]);
 				exs = Executors.newFixedThreadPool(this.parallelism);
-				//System.out.println("Start crawler!");
+			}
+			
+			if(!db.getCrawlerFlag()) {
+				db.setCrawlerFlag(true);
+				super.start();
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		super.start();
 	}
 
 	@Override
@@ -119,7 +119,6 @@ public class Crawler extends Thread {
 					}
 				} else {
 					db.setCrawlerFlag(false);
-					//System.out.println("Crawling finished!");
 				}
 				Thread.sleep(100);
 			}

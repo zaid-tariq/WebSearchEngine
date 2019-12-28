@@ -63,7 +63,7 @@ public class CrawlerScheduler implements CommandLineRunner {
 			
 			CrawlerTask task = new CrawlerTask();
 			Timer timer = new Timer(true);
-			timer.scheduleAtFixedRate(task, 1000, TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS));
+			timer.scheduleAtFixedRate(task, 1000, TimeUnit.MILLISECONDS.convert(20, TimeUnit.MINUTES));
 			System.out.println("Scheduled crawler!");
 		} catch (Exception e) {
 			e.printStackTrace();

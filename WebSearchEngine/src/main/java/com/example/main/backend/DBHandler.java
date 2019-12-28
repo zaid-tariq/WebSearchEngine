@@ -111,7 +111,7 @@ public class DBHandler {
 		con.close();
 
 		DBResponseDocument queryDoc = new DBResponseDocument(null);
-		//queryDoc.scoringMethod = scoringMethod;
+		// queryDoc.scoringMethod = scoringMethod;
 
 		for (String t : searchTerms) {
 			queryDoc.add_term(t, 1, 1);
@@ -332,43 +332,42 @@ public class DBHandler {
 	}
 
 	public void insertDocDataToDatabase(HTMLDocument doc, Connection con) throws SQLException, MalformedURLException {
+		synchronized (DBHandler.class) {
+			PreparedStatement stmtUpdateDoc = con.prepareStatement(
+					"UPDATE documents SET crawled_on_date = CURRENT_DATE, language = ? WHERE url LIKE ?");
+			stmtUpdateDoc.setString(1, doc.getLanguage());
+			stmtUpdateDoc.setString(2, doc.getUrl().toString());
+			stmtUpdateDoc.executeUpdate();
+			stmtUpdateDoc.close();
 
-		PreparedStatement stmtUpdateDoc = con
-				.prepareStatement("UPDATE documents SET crawled_on_date = CURRENT_DATE, language = ? WHERE url LIKE ?");
-		stmtUpdateDoc.setString(1, doc.getLanguage());
-		stmtUpdateDoc.setString(2, doc.getUrl().toString());
-		stmtUpdateDoc.executeUpdate();
-		stmtUpdateDoc.close();
+			PreparedStatement stmtgetDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
+			stmtgetDocId.setString(1, doc.getUrl().toString());
+			stmtgetDocId.execute();
+			ResultSet key = stmtgetDocId.getResultSet();
+			if (key.next()) {
+				int docId = key.getInt(1);
 
-		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
-		stmtgetDocId.setString(1, doc.getUrl().toString());
-		stmtgetDocId.execute();
-		ResultSet key = stmtgetDocId.getResultSet();
-		if (key.next()) {
-			int docId = key.getInt(1);
+				// Insert features of document
+				PreparedStatement stmtInsertFeature = con
+						.prepareStatement("INSERT INTO features (docid, term, term_frequency) VALUES (?,?,?)");
+				for (Entry<String, Integer> e : doc.getTermFrequencies().entrySet()) {
+					stmtInsertFeature.setInt(1, docId);
+					stmtInsertFeature.setString(2, e.getKey());
+					stmtInsertFeature.setInt(3, e.getValue());
+					stmtInsertFeature.addBatch();
+				}
+				stmtInsertFeature.executeBatch();
+				stmtInsertFeature.close();
 
-			// Insert features of document
-			PreparedStatement stmtInsertFeature = con
-					.prepareStatement("INSERT INTO features (docid, term, term_frequency) VALUES (?,?,?)");
-			for (Entry<String, Integer> e : doc.getTermFrequencies().entrySet()) {
-				stmtInsertFeature.setInt(1, docId);
-				stmtInsertFeature.setString(2, e.getKey());
-				stmtInsertFeature.setInt(3, e.getValue());
-				stmtInsertFeature.addBatch();
-			}
-			stmtInsertFeature.executeBatch();
-			stmtInsertFeature.close();
+				PreparedStatement setNumberOfTerms = con
+						.prepareStatement("UPDATE documents SET num_of_terms = ? WHERE docid = ?");
+				setNumberOfTerms.setInt(1, doc.getTermFrequencies().entrySet().size());
+				setNumberOfTerms.setInt(2, docId);
+				setNumberOfTerms.executeUpdate();
+				setNumberOfTerms.close();
 
-			PreparedStatement setNumberOfTerms = con
-					.prepareStatement("UPDATE documents SET num_of_terms = ? WHERE docid = ?");
-			setNumberOfTerms.setInt(1, doc.getTermFrequencies().entrySet().size());
-			setNumberOfTerms.setInt(2, docId);
-			setNumberOfTerms.executeUpdate();
-			setNumberOfTerms.close();
+				// Insert blank documents
 
-			// Insert blank documents
-
-			synchronized (DBHandler.class) {
 				PreparedStatement stmtInsertBlankDocument = con.prepareStatement(
 						"INSERT INTO documents (docid, url, crawled_on_date, language, page_rank) VALUES (DEFAULT, ?, NULL, NULL, NULL) ON CONFLICT DO NOTHING");
 				for (URL url : doc.getLinks()) {
@@ -376,35 +375,35 @@ public class DBHandler {
 					stmtInsertBlankDocument.executeUpdate();
 				}
 				stmtInsertBlankDocument.close();
-			}
 
-			List<Integer> docKeys = new ArrayList<>();
-			PreparedStatement stmtDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
+				List<Integer> docKeys = new ArrayList<>();
+				PreparedStatement stmtDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
 
-			for (URL url : doc.getLinks()) {
-				stmtDocId.setString(1, url.toString());
-				stmtDocId.execute();
-				ResultSet set = stmtDocId.getResultSet();
-				if (set.next()) {
-					docKeys.add(set.getInt(1));
+				for (URL url : doc.getLinks()) {
+					stmtDocId.setString(1, url.toString());
+					stmtDocId.execute();
+					ResultSet set = stmtDocId.getResultSet();
+					if (set.next()) {
+						docKeys.add(set.getInt(1));
+					}
+					set.close();
 				}
-				set.close();
-			}
-			stmtDocId.close();
+				stmtDocId.close();
 
-			// Insert outgoing links
-			PreparedStatement stmtInsertLinks = con
-					.prepareStatement("INSERT INTO links(from_docid, to_docid) VALUES (?,?)");
-			for (int toDoc : docKeys) {
-				stmtInsertLinks.setInt(1, docId);
-				stmtInsertLinks.setInt(2, toDoc);
-				stmtInsertLinks.addBatch();
+				// Insert outgoing links
+				PreparedStatement stmtInsertLinks = con
+						.prepareStatement("INSERT INTO links(from_docid, to_docid) VALUES (?,?)");
+				for (int toDoc : docKeys) {
+					stmtInsertLinks.setInt(1, docId);
+					stmtInsertLinks.setInt(2, toDoc);
+					stmtInsertLinks.addBatch();
+				}
+				stmtInsertLinks.executeBatch();
+				stmtInsertLinks.close();
 			}
-			stmtInsertLinks.executeBatch();
-			stmtInsertLinks.close();
-		}
-		key.close();
-		stmtgetDocId.close();
+			key.close();
+			stmtgetDocId.close();
+		} 
 	}
 
 	public void insertURLToVisited(URL url, Connection con) throws SQLException, MalformedURLException {
@@ -593,7 +592,7 @@ public class DBHandler {
 			this.setPageRank(docIds.get(x), pageRanks.get(x));
 		}
 
-		//System.out.println("PageRank computed");
+		// System.out.println("PageRank computed");
 	}
 
 	public void setPageRank(int docId, double pagerank) throws SQLException {

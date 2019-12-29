@@ -62,7 +62,7 @@ public class PageRank {
 		private SparseMatrix transitionMatrix;
 		private double randomJumpProbability = -1;
 		private double terminationCriteria = -1;
-		private int maximumIterations = 10000;
+		private int maximumIterations = 100;
 
 		public Builder() {
 

@@ -121,7 +121,9 @@ public class SearchAPI {
 	public void updateScores() {
 		try {
 			db.computePageRank(0.1,0.001);
+			System.out.println("Computed PageRank");
 			db.updateScores();
+			System.out.println("Update Scores");
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 		} catch (Exception ex) {

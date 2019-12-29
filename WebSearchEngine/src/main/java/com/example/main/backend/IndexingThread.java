@@ -23,9 +23,10 @@ public class IndexingThread extends Thread {
 	public void run() {
 		try {
 			while (true) {
+				System.out.println("Started");
 				api.updateScores();
 				IndexingThread.sleep(sleepSeconds);
-				//System.out.println("update scores");
+				System.out.println("Finished");
 			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();

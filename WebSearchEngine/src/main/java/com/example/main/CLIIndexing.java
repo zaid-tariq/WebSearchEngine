@@ -24,6 +24,7 @@ public class CLIIndexing implements CommandLineRunner {
 
 	public void run(String... args) throws SQLException, URISyntaxException {
 		dbc.create();
+		System.out.println("Database set up");
 		indexer.start();
 
 	}

@@ -150,7 +150,7 @@ public class HTMLParser {
 					stemmer.stem();
 					String stemmedWord = stemmer.toString();
 					doc.incrementTermFrequency(stemmedWord);
-					processedContent += stemmedWord;
+					processedContent += word;
 				}
 			}
 		} else {

@@ -17,6 +17,7 @@ public class DBResponseDocument {
 	public double pageRank;
 	public int scoringMethod;
 	double alpha = 0.7;
+	private String snippet;
 
 	public DBResponseDocument(String url2) {
 		this.url = url2;
@@ -78,6 +79,18 @@ public class DBResponseDocument {
 
 	public double getCosSimScore() {
 		return this.cosSim;
+	}
+	
+	public String getSnippet() {
+		return this.snippet;
+	}
+	
+	public void setSnippet(String snippet) {
+		this.snippet = snippet;
+	}
+	
+	public String getUrl() {
+		return this.url;
 	}
 
 }

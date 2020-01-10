@@ -11,11 +11,13 @@ public class SearchResultResponse {
 		public int rank;
 		public String url;
 		public float score;
+		public String snippet;
 		
-		public SearchResultItem(int r, String u, float s) {
+		public SearchResultItem(int r, String u, float s, String snippet) {
 			this.rank = r;
 			this.url = u;
 			this.score = s;
+			this.snippet = snippet;
 		}
 
 		public int getRank() {
@@ -40,6 +42,14 @@ public class SearchResultResponse {
 
 		public void setScore(float score) {
 			this.score = score;
+		}
+		
+		public String getSnippet() {
+			return snippet;
+		}
+		
+		public void setSnippet(String snippet) {
+			this.snippet = snippet;
 		}
 	}
 	
@@ -90,8 +100,8 @@ public class SearchResultResponse {
 		this.stat.add(new StatItem(df, term));
 	}
 	
-	public void addSearchResultItem(int rank, String url, float score) {
-		this.resultList.add(new SearchResultItem(rank, url, score));
+	public void addSearchResultItem(int rank, String url, float score, String snippet) {
+		this.resultList.add(new SearchResultItem(rank, url, score, snippet));
 	}
 	
 	public void setCollectionSize(int size) {

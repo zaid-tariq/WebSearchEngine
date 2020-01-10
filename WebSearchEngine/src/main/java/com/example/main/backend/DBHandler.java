@@ -65,7 +65,7 @@ public class DBHandler {
 		sql.setArray(2, con.createArrayOf("text", languages));
 		sql.execute();
 		ResultSet results = sql.getResultSet();
-		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, 3); // closes connection too
+		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, 3, searchTerms, new ArrayList<String>()); // closes connection too
 	}
 
 	public SearchResultResponse searchDisjunctiveQuery(String query, int k_limit, String[] languages,
@@ -85,13 +85,13 @@ public class DBHandler {
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		searchTerms.addAll(requiredTerms); // combine all terms
-		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, scoringMethod); // closes
+		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, scoringMethod, requiredTerms, searchTerms); // closes
 																											// connection
 																											// too
 	}
 
 	private SearchResultResponse processSearchQueryResultSet(Connection con, ResultSet results,
-			List<String> searchTerms, int k_limit, SearchResultResponse a_response, int scoringMethod)
+			List<String> searchTerms, int k_limit, SearchResultResponse a_response, int scoringMethod, List<String> requiredTerms, List<String> otherTerms)
 			throws SQLException {
 
 		HashMap<String, DBResponseDocument> resDocs = new HashMap<String, DBResponseDocument>();
@@ -121,6 +121,7 @@ public class DBHandler {
 		for (String key : resDocs.keySet()) {
 			DBResponseDocument doc = resDocs.get(key);
 			doc.calculateCosineSimilarity(queryDoc);
+			doc.setSnippet(createSnippet(getContentByURL(doc.getUrl()), requiredTerms, otherTerms));
 			sortedSet.add(doc);
 		}
 
@@ -130,7 +131,7 @@ public class DBHandler {
 		if (a_response == null)
 			a_response = new SearchResultResponse();
 		for (DBResponseDocument resDoc : sortedSet) {
-			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.getCosSimScore());
+			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.getCosSimScore(), resDoc.getSnippet());
 			if (rank > k_limit)
 				break;
 		}
@@ -334,9 +335,10 @@ public class DBHandler {
 	public void insertDocDataToDatabase(HTMLDocument doc, Connection con) throws SQLException, MalformedURLException {
 		synchronized (DBHandler.class) {
 			PreparedStatement stmtUpdateDoc = con.prepareStatement(
-					"UPDATE documents SET crawled_on_date = CURRENT_DATE, language = ? WHERE url LIKE ?");
+					"UPDATE documents SET crawled_on_date = CURRENT_DATE, language = ?, content = ?WHERE url LIKE ?");
 			stmtUpdateDoc.setString(1, doc.getLanguage());
 			stmtUpdateDoc.setString(2, doc.getUrl().toString());
+			stmtUpdateDoc.setString(3, doc.getContent());
 			stmtUpdateDoc.executeUpdate();
 			stmtUpdateDoc.close();
 
@@ -369,7 +371,7 @@ public class DBHandler {
 				// Insert blank documents
 
 				PreparedStatement stmtInsertBlankDocument = con.prepareStatement(
-						"INSERT INTO documents (docid, url, crawled_on_date, language, page_rank) VALUES (DEFAULT, ?, NULL, NULL, NULL) ON CONFLICT DO NOTHING");
+						"INSERT INTO documents (docid, url, crawled_on_date, language, page_rank, content) VALUES (DEFAULT, ?, NULL, NULL, NULL, NULL) ON CONFLICT DO NOTHING");
 				for (URL url : doc.getLinks()) {
 					stmtInsertBlankDocument.setString(1, url.toString());
 					stmtInsertBlankDocument.executeUpdate();
@@ -603,5 +605,56 @@ public class DBHandler {
 		stmt.execute();
 		stmt.close();
 		con.close();
+	}
+	
+	/**
+	 * Returns the content of a document identified by the url
+	 * @param url
+	 * @return Content of the document or NULL
+	 * @throws SQLException
+	 */
+	public String getContentByURL(String url) throws SQLException {
+		Connection con = getConnection();
+		
+		PreparedStatement ps = con.prepareStatement("SELECT content FROM documents WHERE url = ?");
+		ps.setString(1, url);
+		ps.execute();
+		ResultSet rs = ps.getResultSet();
+		if(!rs.next()) {
+			return null;
+		}
+		
+		String content = rs.getString(1);
+		
+		rs.close();
+		ps.close();
+		con.close();
+		
+		return content;
+	}
+	
+	/**
+	 * Creates a preview snipped which has a maximum length of 32 terms
+	 * @param content Content
+	 * @param SearchTerms search terms to look for in the snippet
+	 * @return Preview snippet with a maximum length of 32 terms
+	 */
+	private String createSnippet(String content, List<String> necessaryTerms, List<String> otherTerms) {
+		//TODO: implement
+		/**
+		 * Idea scoring model:
+		 * 
+		 * - Because there is a limitation of 32 terms, we can overall have a maximum of 4 sub-snippets
+		 * 	- check for terms that must be included in the document --> they are preferred
+		 * 		--> show the ones with the highest term frequency inside the content
+		 *  - fill the remaining sub-snippets with the terms that have the highest term frequency of the other terms
+		 *	
+		 * --> Overall less sub snippets are better
+		 */
+		
+		
+		
+		
+		return "";
 	}
 }

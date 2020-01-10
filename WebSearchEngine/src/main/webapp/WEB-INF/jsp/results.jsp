@@ -72,6 +72,9 @@
 			                <td><a href="${result.url}">${result.url}</a></td>
 			                <td>${result.score}</td>  
 			            </tr>
+			            <tr>
+			            	<td colspan=3>${result.snippet}</td>
+			            </tr>
 			        </c:forEach>
 			        </table>	
 	    		</c:otherwise>

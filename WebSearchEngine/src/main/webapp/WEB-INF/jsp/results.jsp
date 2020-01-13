@@ -73,7 +73,7 @@
 			                <td>${result.score}</td>  
 			            </tr>
 			            <tr>
-			            	<td colspan=3>${result.snippet}</td>
+			            	<td colspan=2><div style="display:block;word-wrap: break-word;width:70vw">${result.snippet}</div></td>
 			            </tr>
 			        </c:forEach>
 			        </table>	

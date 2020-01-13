@@ -9,12 +9,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.sql.DataSource;
 
@@ -27,7 +29,10 @@ import org.springframework.stereotype.Repository;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.dao.DBResponseDocument;
 import com.example.main.backend.pagerank.PageRank;
+import com.example.main.backend.utils.SnippetGenerator;
 import com.example.main.backend.utils.Utils;
+
+import ch.qos.logback.classic.pattern.Util;
 
 @Repository
 public class DBHandler {
@@ -65,7 +70,7 @@ public class DBHandler {
 		sql.setArray(2, con.createArrayOf("text", languages));
 		sql.execute();
 		ResultSet results = sql.getResultSet();
-		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, 3, searchTerms, new ArrayList<String>()); // closes connection too
+		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, 3); // closes connection too
 	}
 
 	public SearchResultResponse searchDisjunctiveQuery(String query, int k_limit, String[] languages,
@@ -85,13 +90,13 @@ public class DBHandler {
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		searchTerms.addAll(requiredTerms); // combine all terms
-		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, scoringMethod, requiredTerms, searchTerms); // closes
-																											// connection
-																											// too
+		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, scoringMethod); // closes
+		// connection
+		// too
 	}
 
 	private SearchResultResponse processSearchQueryResultSet(Connection con, ResultSet results,
-			List<String> searchTerms, int k_limit, SearchResultResponse a_response, int scoringMethod, List<String> requiredTerms, List<String> otherTerms)
+			List<String> searchTerms, int k_limit, SearchResultResponse a_response, int scoringMethod)
 			throws SQLException {
 
 		HashMap<String, DBResponseDocument> resDocs = new HashMap<String, DBResponseDocument>();
@@ -121,7 +126,6 @@ public class DBHandler {
 		for (String key : resDocs.keySet()) {
 			DBResponseDocument doc = resDocs.get(key);
 			doc.calculateCosineSimilarity(queryDoc);
-			doc.setSnippet(createSnippet(getContentByURL(doc.getUrl()), requiredTerms, otherTerms));
 			sortedSet.add(doc);
 		}
 
@@ -131,7 +135,8 @@ public class DBHandler {
 		if (a_response == null)
 			a_response = new SearchResultResponse();
 		for (DBResponseDocument resDoc : sortedSet) {
-			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.getCosSimScore(), resDoc.getSnippet());
+			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.getCosSimScore(),
+					createSnippet(getContentByURL(resDoc.getUrl()), searchTerms));
 			if (rank > k_limit)
 				break;
 		}
@@ -335,10 +340,10 @@ public class DBHandler {
 	public void insertDocDataToDatabase(HTMLDocument doc, Connection con) throws SQLException, MalformedURLException {
 		synchronized (DBHandler.class) {
 			PreparedStatement stmtUpdateDoc = con.prepareStatement(
-					"UPDATE documents SET crawled_on_date = CURRENT_DATE, language = ?, content = ?WHERE url LIKE ?");
+					"UPDATE documents SET crawled_on_date = CURRENT_DATE, language = ?, content = ? WHERE url LIKE ?");
 			stmtUpdateDoc.setString(1, doc.getLanguage());
-			stmtUpdateDoc.setString(2, doc.getUrl().toString());
-			stmtUpdateDoc.setString(3, doc.getContent());
+			stmtUpdateDoc.setString(2, doc.getContent());
+			stmtUpdateDoc.setString(3, doc.getUrl().toString());
 			stmtUpdateDoc.executeUpdate();
 			stmtUpdateDoc.close();
 
@@ -405,7 +410,7 @@ public class DBHandler {
 			}
 			key.close();
 			stmtgetDocId.close();
-		} 
+		}
 	}
 
 	public void insertURLToVisited(URL url, Connection con) throws SQLException, MalformedURLException {
@@ -606,55 +611,76 @@ public class DBHandler {
 		stmt.close();
 		con.close();
 	}
-	
+
 	/**
 	 * Returns the content of a document identified by the url
+	 * 
 	 * @param url
 	 * @return Content of the document or NULL
 	 * @throws SQLException
 	 */
 	public String getContentByURL(String url) throws SQLException {
 		Connection con = getConnection();
-		
+
 		PreparedStatement ps = con.prepareStatement("SELECT content FROM documents WHERE url = ?");
 		ps.setString(1, url);
 		ps.execute();
 		ResultSet rs = ps.getResultSet();
-		if(!rs.next()) {
+		if (!rs.next()) {
 			return null;
 		}
-		
+
 		String content = rs.getString(1);
-		
+
 		rs.close();
 		ps.close();
 		con.close();
-		
+
 		return content;
 	}
-	
+
 	/**
-	 * Creates a preview snipped which has a maximum length of 32 terms
-	 * @param content Content
+	 * Creates a preview snippet which has a maximum length of 32 terms
+	 * 
+	 * @param content     Content
 	 * @param SearchTerms search terms to look for in the snippet
 	 * @return Preview snippet with a maximum length of 32 terms
 	 */
-	private String createSnippet(String content, List<String> necessaryTerms, List<String> otherTerms) {
-		//TODO: implement
-		/**
-		 * Idea scoring model:
-		 * 
-		 * - Because there is a limitation of 32 terms, we can overall have a maximum of 4 sub-snippets
-		 * 	- check for terms that must be included in the document --> they are preferred
-		 * 		--> show the ones with the highest term frequency inside the content
-		 *  - fill the remaining sub-snippets with the terms that have the highest term frequency of the other terms
-		 *	
-		 * --> Overall less sub snippets are better
-		 */
+	private String createSnippet(String content, List<String> terms) {
+		TreeMap<String, Integer> termsFrequency = Utils.getOrderedTermsByFrequency(terms, content);
+		String specialChars = "(\\>|\\/|&nbsp;|&bull;|&amp;|&#39;|\\,|\\:|\\;|\\[|\\]|\\{|\\}|\\||\\+|\\-|\\*|\\)|\\(|\\=|\\\"|\\|'|'|&|…|#|_)";
+		String[] split = content.replaceAll(specialChars, "").split("\\s+");
+		List<String[]> s = new ArrayList<>();
+		for (int x = 0; x < split.length; x += 100) {
+			s.add(Arrays.copyOfRange(split, x,
+					Math.min(x + 100, content.replaceAll(specialChars, "").split("\\s+").length)));
+			x -= 5;
+		}
+
+		List<Object[]> snippets = new ArrayList<>();
+		for (String[] a : s) {
+			SnippetGenerator sg = new SnippetGenerator(a, termsFrequency, 32);
+			snippets.add(sg.generateSnippet());
+		}
+
+		int amountTerms = 0;
+		String completeSnippet = "";
+		System.out.println(snippets.size());
+		System.out.println();
+		while (amountTerms < 32 && snippets.size() > 0) {
+			Object[] next = Utils.getBestSnippet(snippets);
+			System.out.println(next[0]);
+			if (((String) next[0]).split(" ").length + amountTerms <= 32) {
+				if(completeSnippet.equals("")) {
+					completeSnippet += next[0];
+				}else {
+					completeSnippet += " ... " + next[0]; 
+				}
+				amountTerms += ((String) next[0]).split(" ").length;
+			}
+			snippets.remove(next);
+		}
 		
-		
-		
-		
-		return "";
+		return completeSnippet;
 	}
 }

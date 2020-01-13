@@ -150,18 +150,26 @@ public class HTMLParser {
 					stemmer.stem();
 					String stemmedWord = stemmer.toString();
 					doc.incrementTermFrequency(stemmedWord);
-					processedContent += word;
+//					if(processedContent.equals("")) {
+//						processedContent += word;
+//					}else {
+//						processedContent += " "+word;
+//					}
 				}
 			}
 		} else {
 			while (!words.isEmpty()) {
 				String word = words.remove().toLowerCase();
 				doc.incrementTermFrequency(word);
-				processedContent += word;
+//				if(processedContent.equals("")) {
+//					processedContent += word;
+//				}else {
+//					processedContent += " "+word;
+//				}
 			}
 		}
 
-		doc.setContent(processedContent);
+		doc.setContent(content.replaceAll("<[^>]*>", " "));
 		br.close();
 		
 		return doc;

@@ -139,7 +139,7 @@ public class DatabaseCreator {
 
 	private void createDocumentsTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
-				"CREATE TABLE IF NOT EXISTS documents (docid SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE , crawled_on_date DATE, language TEXT, page_rank DOUBLE PRECISION, num_of_terms int)");
+				"CREATE TABLE IF NOT EXISTS documents (docid SERIAL PRIMARY KEY, url TEXT NOT NULL UNIQUE , crawled_on_date DATE, language TEXT, page_rank DOUBLE PRECISION, num_of_terms int, content TEXT)");
 		statement.execute();
 		statement.close();
 	}

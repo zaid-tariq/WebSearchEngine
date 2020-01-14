@@ -1,6 +1,8 @@
 package com.example.main.backend;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -19,8 +21,10 @@ import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.core.io.ClassPathResource;
+import org.w3c.tidy.Tidy;
 
 import com.example.main.backend.utils.LanguageDetector;
 import com.example.main.backend.utils.Utils;
@@ -72,14 +76,30 @@ public class HTMLParser {
 			return null;
 		}
 
-		BufferedReader br = new BufferedReader(new InputStreamReader(urlToIndex.openStream()));
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		//Convert it to XHTML --> makes parsing easier
+		Tidy tidy = new Tidy();
+		tidy.setXmlTags(false);
+		tidy.setXHTML(true);
+		tidy.setMakeClean(true);
+		tidy.setForceOutput(true);
+		tidy.parse(urlToIndex.openStream(), out);
+				
+		byte[] b = out.toByteArray();
+		BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(b)));
 
 		String content = "";
 		String line;
 		while ((line = br.readLine()) != null) {
-			content += line;
+			//Add empty space before line to avoid merge of words
+			content += " " + line;
 		}
-
+		
+		//We don't want the content of that tags as they are unnecessary for us
+		content = content.replaceAll("<script(.*?)>(.*?)</script>", " ");
+		content = content.replaceAll("<style(.*?)>(.*?)</style>", " ");
+		
+		
 		// 1. parse file for meta data e.g. language
 		// If the language is set then use that otherwise use the language detector
 		Matcher mLanguage = Pattern.compile("<html[^>]*lang=\"(.*?)\"[^>]*>").matcher(content);
@@ -114,11 +134,17 @@ public class HTMLParser {
 			}
 
 		}
+		
+
+		
 
 		// 3. remove all tags
 		LinkedList<String> extractedContent = new LinkedList<String>();
-		String specialChars = "(\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|&#39;|\\.|\\,|\\:|\\;|\\[|\\]|\\{|\\}|\\||\\+|\\-|\\*|\\)|\\(|\\=|\\\"|\\|'|'|&|…|#|_)";
-		for (String word : content.replaceAll("<[^>]*>", " ").replaceAll(specialChars, "").split("\\s+")) {
+		String specialChars = "(<br>|\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|&#39;|&hellip;|\\.|\\,|\\:|\\;|\\[|\\]|\\{|\\}|\\||\\+|\\-|\\*|\\)|\\(|\\=|\\\"|\\|'|'|&|…|#|_)";
+		content = content.replaceAll("<[^>]*>", " ");
+		//Html Entities unescape
+		content = StringEscapeUtils.builder(StringEscapeUtils.UNESCAPE_HTML4).escape(content).toString();
+		for (String word : content.replaceAll(specialChars, " ").split("\\s+")) {
 			if (!word.trim().equals("")) {
 				extractedContent.add(word);
 			}

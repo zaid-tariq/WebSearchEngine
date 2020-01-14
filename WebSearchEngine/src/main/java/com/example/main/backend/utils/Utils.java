@@ -96,4 +96,13 @@ public class Utils {
 		return best;
 	}
 
+	/**
+	 * Wraps an string with the defined html tag
+	 * @param htmlTag
+	 * @param content
+	 * @return
+	 */
+	public static String wrapStringWithHtmlTag(String htmlTag, String content) {
+		return "<"+htmlTag+">"+content+"</"+htmlTag+">";
+	}
 }

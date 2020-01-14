@@ -32,8 +32,6 @@ import com.example.main.backend.pagerank.PageRank;
 import com.example.main.backend.utils.SnippetGenerator;
 import com.example.main.backend.utils.Utils;
 
-import ch.qos.logback.classic.pattern.Util;
-
 @Repository
 public class DBHandler {
 
@@ -649,11 +647,11 @@ public class DBHandler {
 	private String createSnippet(String content, List<String> terms) {
 		TreeMap<String, Integer> termsFrequency = Utils.getOrderedTermsByFrequency(terms, content);
 		String specialChars = "(\\>|\\/|&nbsp;|&bull;|&amp;|&#39;|\\,|\\:|\\;|\\[|\\]|\\{|\\}|\\||\\+|\\-|\\*|\\)|\\(|\\=|\\\"|\\|'|'|&|…|#|_)";
-		String[] split = content.replaceAll(specialChars, "").split("\\s+");
+		String[] split = content.replaceAll(specialChars, " ").split("\\s+");
 		List<String[]> s = new ArrayList<>();
 		for (int x = 0; x < split.length; x += 100) {
 			s.add(Arrays.copyOfRange(split, x,
-					Math.min(x + 100, content.replaceAll(specialChars, "").split("\\s+").length)));
+					Math.min(x + 100, content.replaceAll(specialChars, " ").split("\\s+").length)));
 			x -= 5;
 		}
 
@@ -671,16 +669,40 @@ public class DBHandler {
 			Object[] next = Utils.getBestSnippet(snippets);
 			System.out.println(next[0]);
 			if (((String) next[0]).split(" ").length + amountTerms <= 32) {
-				if(completeSnippet.equals("")) {
+				if (completeSnippet.equals("")) {
 					completeSnippet += next[0];
-				}else {
-					completeSnippet += " ... " + next[0]; 
+				} else {
+					completeSnippet += " ... " + next[0];
 				}
 				amountTerms += ((String) next[0]).split(" ").length;
 			}
 			snippets.remove(next);
 		}
-		
-		return completeSnippet;
+
+		String markedString = "";
+		List<String> lowerCaseTerms = new ArrayList<String>();
+		for (String t : terms) {
+			lowerCaseTerms.add(t.toLowerCase());
+			System.out.println("Search Terms: " + t.toLowerCase());
+		}
+
+		for (String snip : completeSnippet.split("\\s+")) {
+			System.out.println(snip.toLowerCase());
+			if (lowerCaseTerms.contains(snip.toLowerCase())) {
+				if (markedString.equals("")) {
+					markedString += Utils.wrapStringWithHtmlTag("b", snip);
+				} else {
+					markedString += " " + Utils.wrapStringWithHtmlTag("b", snip);
+				}
+			} else {
+				if (markedString.equals("")) {
+					markedString += snip;
+				} else {
+					markedString += " " + snip;
+				}
+			}
+		}
+
+		return markedString;
 	}
 }

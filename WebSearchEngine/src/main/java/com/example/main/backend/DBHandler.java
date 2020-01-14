@@ -26,6 +26,8 @@ import com.example.main.backend.dao.DBResponseDocument;
 import com.example.main.backend.pagerank.PageRank;
 import com.example.main.backend.utils.Utils;
 
+import net.sf.extjwnl.JWNLException;
+
 @Repository
 public class DBHandler {
 
@@ -56,7 +58,7 @@ public class DBHandler {
 
 		Connection con = getConnection();
 		List<String> searchTerms = Utils.getTermsInQuotes(query);
-		String[] searchTermsArr = Utils.getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
+		String[] searchTermsArr = searchTerms.toArray(new String[searchTerms.size()]);
 		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_conjunctive_search(?,?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
 		sql.setArray(2, con.createArrayOf("text", languages));
@@ -66,14 +68,17 @@ public class DBHandler {
 	}
 
 	public SearchResultResponse searchDisjunctiveQuery(String query, int k_limit, String[] languages,
-			SearchResultResponse a_response, int scoringMethod) throws SQLException {
+			SearchResultResponse a_response, int scoringMethod) throws SQLException, JWNLException {
 
 		Connection con = getConnection();
 
-		List<String> searchTerms = Utils.getTermsWithoutQuotes(query);
+		List<String> searchTerms = QueryExpansion.expandQuery(Utils.getTermsWithoutQuotes(query));
 		String[] searchTermsArr = (String[]) searchTerms.toArray(new String[searchTerms.size()]);
 		List<String> requiredTerms = Utils.getTermsInQuotes(query);
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
+		
+		//TODO: search with stemming
+		
 
 		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?,?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));

@@ -31,7 +31,7 @@ public class DatabaseCreator {
 			createIndices(connection);
 			create_function_get_related_terms_to_less_frequent_terms(connection);
 			create_alternate_query_scorer_function(connection);
-
+			createCollectionVocabularyTable(connection);
 			createCrawlerStateTable(connection);
 			createCrawlerQueueTable(connection);
 			createCrawlerVisitedPagesTable(connection);
@@ -176,6 +176,14 @@ public class DatabaseCreator {
 	private void createCrawlerStateTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
 				"CREATE TABLE IF NOT EXISTS crawlerState (maximum_depth INT NOT NULL, maximum_docs INT NOT NULL, crawled_docs INT NOT NULL, leave_domain BOOLEAN, parallelism INT NOT NULL, run BOOLEAN DEFAULT TRUE, domains TEXT[])");
+		statement.execute();
+		statement.close();
+	}
+	
+	private void createCollectionVocabularyTable(Connection con) throws SQLException {
+		
+		PreparedStatement statement = con.prepareStatement(
+				"CREATE TABLE IF NOT EXISTS collection_vocab (term text NOT NULL, frequency INT NOT NULL)");
 		statement.execute();
 		statement.close();
 	}

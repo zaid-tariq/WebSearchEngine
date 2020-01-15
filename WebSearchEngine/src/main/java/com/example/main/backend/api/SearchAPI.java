@@ -142,7 +142,8 @@ public class SearchAPI {
 			SpellChecker spellChecker = new SpellChecker();
 			Map<String, List<Map.Entry<String, Integer>>> relTerms = spellChecker.findRelatedTermsForLessFrequentTerms(termsArr, con);
 			
-			altQuery = spellChecker.findBestAlternateQuery(terms, relTerms, con);
+			if(relTerms.size() > 0 )
+				altQuery = spellChecker.findBestAlternateQuery(terms, relTerms, con);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

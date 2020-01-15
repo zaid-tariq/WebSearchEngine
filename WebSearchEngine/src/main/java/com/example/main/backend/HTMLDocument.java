@@ -16,6 +16,7 @@ public class HTMLDocument {
 	private HashMap<String, Integer> termFrequencies = new HashMap<>();
 	private String language = null;
 	private String content = null;
+	private LinkedHashSet<URL> images = new LinkedHashSet<URL>();
 
 	public HTMLDocument(URL url) {
 		this.url = url;
@@ -59,5 +60,13 @@ public class HTMLDocument {
 
 	public String getContent() {
 		return this.content;
+	}
+	
+	public void addImage(URL url) {
+		this.images.add(url);
+	}
+	
+	public LinkedHashSet<URL> getImages(){
+		return this.images;
 	}
 }

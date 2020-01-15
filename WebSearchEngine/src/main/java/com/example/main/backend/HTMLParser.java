@@ -45,7 +45,7 @@ public class HTMLParser {
 			try {
 				java.nio.file.Files.copy(inputStream, somethingFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 			} finally {
-			    IOUtils.closeQuietly(inputStream);
+				IOUtils.closeQuietly(inputStream);
 			}
 			file = somethingFile;
 		} catch (FileNotFoundException ex) {
@@ -53,7 +53,7 @@ public class HTMLParser {
 		}
 		stopwords = getStopwordsFromFile(file);
 	}
-	
+
 	/**
 	 * Parses a given HTML file defined by the URI
 	 * 
@@ -77,29 +77,29 @@ public class HTMLParser {
 		}
 
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		//Convert it to XHTML --> makes parsing easier
+		// Convert it to XHTML --> makes parsing easier
 		Tidy tidy = new Tidy();
 		tidy.setXmlTags(false);
 		tidy.setXHTML(true);
 		tidy.setMakeClean(true);
 		tidy.setForceOutput(true);
 		tidy.parse(urlToIndex.openStream(), out);
-				
+
 		byte[] b = out.toByteArray();
 		BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(b)));
 
 		String content = "";
 		String line;
 		while ((line = br.readLine()) != null) {
-			//Add empty space before line to avoid merge of words
+			// Add empty space before line to avoid merge of words
 			content += " " + line;
 		}
-		
-		//We don't want the content of that tags as they are unnecessary for us
+		br.close();
+
+		// We don't want the content of that tags as they are unnecessary for us
 		content = content.replaceAll("<script(.*?)>(.*?)</script>", " ");
 		content = content.replaceAll("<style(.*?)>(.*?)</style>", " ");
-		
-		
+
 		// 1. parse file for meta data e.g. language
 		// If the language is set then use that otherwise use the language detector
 		Matcher mLanguage = Pattern.compile("<html[^>]*lang=\"(.*?)\"[^>]*>").matcher(content);
@@ -119,7 +119,7 @@ public class HTMLParser {
 			}
 		}
 
-		// 2. parse the file for links
+		// 2. parse the file for links and images
 
 		Matcher mLinks = Pattern.compile("<a[^>]*href=\"(.*?)\"[^>]*>").matcher(content);
 		while (mLinks.find()) {
@@ -132,17 +132,29 @@ public class HTMLParser {
 				// Yeah it is no URL...
 				e.printStackTrace();
 			}
-
 		}
-		
 
+		Matcher mImages = Pattern.compile("<img[^>]*src=\"(.*?)\"[^>]*>").matcher(content);
+		while (mImages.find()) {
+			try {
+				List<String> urls = UrlExtractor.extractUrls(mLinks.group(1));
+				for (String url : urls) {
+					doc.addImage(new URL(url));
+				}
+			} catch (MalformedURLException e) {
+				e.printStackTrace();
+			}
+		}
+
+		// TODO: get content before and after the image. It would be easy to store the
+		// indexes of the word that should be considered
 		
 
 		// 3. remove all tags
 		LinkedList<String> extractedContent = new LinkedList<String>();
 		String specialChars = "(<br>|\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|&#39;|&hellip;|\\.|\\,|\\:|\\;|\\[|\\]|\\{|\\}|\\||\\+|\\-|\\*|\\)|\\(|\\=|\\\"|\\|'|'|&|…|#|_)";
 		content = content.replaceAll("<[^>]*>", " ");
-		//Html Entities unescape
+		// Html Entities unescape
 		content = StringEscapeUtils.builder(StringEscapeUtils.UNESCAPE_HTML4).escape(content).toString();
 		for (String word : content.replaceAll(specialChars, " ").split("\\s+")) {
 			if (!word.trim().equals("")) {
@@ -159,11 +171,10 @@ public class HTMLParser {
 							: extractedContent.size() - 1);
 			doc.setLanguage(detector.detect(wordsToConsider));
 		}
-		
+
 		// 4. remove all stopwords, stemming and term frequency calculation at the same
 		// time for efficiency
 		// no stemming for german documents
-		String processedContent = "";
 		Stemmer stemmer = new Stemmer();
 		Queue<String> words = extractedContent;
 
@@ -176,28 +187,17 @@ public class HTMLParser {
 					stemmer.stem();
 					String stemmedWord = stemmer.toString();
 					doc.incrementTermFrequency(stemmedWord);
-//					if(processedContent.equals("")) {
-//						processedContent += word;
-//					}else {
-//						processedContent += " "+word;
-//					}
 				}
 			}
 		} else {
 			while (!words.isEmpty()) {
 				String word = words.remove().toLowerCase();
 				doc.incrementTermFrequency(word);
-//				if(processedContent.equals("")) {
-//					processedContent += word;
-//				}else {
-//					processedContent += " "+word;
-//				}
 			}
 		}
 
 		doc.setContent(content.replaceAll("<[^>]*>", " "));
-		br.close();
-		
+
 		return doc;
 	}
 

@@ -97,11 +97,6 @@ public class DBHandler {
 		String[] searchTermsArr = (String[]) searchTerms.toArray(new String[searchTerms.size()]);
 		List<String> requiredTerms = Utils.getTermsInQuotes(query);
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
-		
-		//TODO: search with stemming
-		//TODO: query scoring improvement: separate the many tables that are in the query into different tables. 
-		//Run updates on all those tables at different times rather than doing everything concurrently.
-		//This will save space and improve efficiency
 
 		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?,?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));

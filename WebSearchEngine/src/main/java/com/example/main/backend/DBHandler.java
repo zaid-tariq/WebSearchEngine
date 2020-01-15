@@ -44,11 +44,32 @@ public class DBHandler {
 		return dataSource.getConnection();
 	}
 
+	public void updateIdfScores() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL update_idf_scores_function()");
+		query.execute();
+		con.close();
+	}
+	
+	public void updateStats() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL update_doc_stats_table()");
+		query.execute();
+		con.close();
+	}
+	
+	public void updateDocFrequencies() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL update_df_table()");
+		query.execute();
+		con.close();
+	}
+	
 	public void updateScores() throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("CALL update_scores(?,?)");
 		query.setFloat(1, Float.parseFloat(bm25_k));
-		query.setFloat(2, Float.parseFloat(bm25_k));
+		query.setFloat(2, Float.parseFloat(bm25_b));
 		query.execute();
 		con.close();
 	}
@@ -78,7 +99,6 @@ public class DBHandler {
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
 		
 		//TODO: search with stemming
-		//TODO: implement the SQL side of query expansion
 		//TODO: query scoring improvement: separate the many tables that are in the query into different tables. 
 		//Run updates on all those tables at different times rather than doing everything concurrently.
 		//This will save space and improve efficiency

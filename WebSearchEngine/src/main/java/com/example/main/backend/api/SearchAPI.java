@@ -117,18 +117,6 @@ public class SearchAPI {
 		res.filterResultsWithSite(q.site);
 		return res;
 	}
-
-	public void updateScores() {
-		try {
-			db.computePageRank(0.1,0.001);
-			db.updateScores();
-
-		} catch (SQLException ex) {
-			ex.printStackTrace();
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-	}
 	
 	public String getDidYouMeanQuery(String query)  {
 		

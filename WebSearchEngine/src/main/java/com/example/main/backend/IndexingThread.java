@@ -1,10 +1,11 @@
 package com.example.main.backend;
 
+import java.sql.SQLException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.example.main.backend.api.SearchAPI;
 
 @Component
 public class IndexingThread extends Thread {
@@ -13,7 +14,7 @@ public class IndexingThread extends Thread {
 	private int sleepSeconds;
 	
 	@Autowired
-	SearchAPI api;
+	DBHandler db;
 
 	/**
 	 *
@@ -27,7 +28,20 @@ public class IndexingThread extends Thread {
 	public void run() {
 		try {
 			while (true) {
-				api.updateScores();
+				
+				try {
+					//probably should have all these in separate individual threads
+					db.updateDocFrequencies();
+					db.updateStats();
+					db.updateIdfScores();
+					db.computePageRank(0.1,0.001);
+					db.updateScores();
+				} catch (SQLException ex) {
+					ex.printStackTrace();
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+				
 				IndexingThread.sleep(sleepSeconds);
 				System.out.println("update scores");
 			}

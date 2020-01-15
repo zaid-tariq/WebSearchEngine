@@ -106,8 +106,8 @@ public class DatabaseCreator {
 	private void createFunctionDisjunctive_search(Connection connection) throws SQLException {
 		String query = 
 				"CREATE OR REPLACE FUNCTION get_docs_for_disjunctive_search(search_terms text[], required_terms text[], lang TEXT[]) " + 
-				"RETURNS TABLE(docurl text, term text, tfidf real, okapi real) " + 
-				"LANGUAGE 'plpgsql' " + 
+				" RETURNS TABLE(docurl text, term text, tfidf real, okapi real) " + 
+				" LANGUAGE 'plpgsql' " + 
 				"AS $$ " + 
 				"BEGIN    " + 
 				"" + 
@@ -133,10 +133,6 @@ public class DatabaseCreator {
 				"		  )  t3" + 
 				"		  ON" + 
 				"		  t2.elem = t3.elem;" + 
-				"" + 
-				"    --TODO: use the collection_vocab table to find most frequent terms from the synonyms " + 
-				"    --and choose top 5 for each term" + 
-				"" + 
 				"  CREATE TEMP TABLE combined_expanded_terms (term text);" + 
 				"  INSERT INTO combined_expanded_terms" + 
 				"    SELECT * " + 
@@ -311,17 +307,15 @@ public class DatabaseCreator {
 		"    LANGUAGE 'plpgsql'   " + 
 		"    AS $$   " + 
 		"    BEGIN   " + 
-		"    WITH   " + 
-		"      df_tbl AS(   --# same thing also being done in createStatsFunction, get_term_frequencies" + 
-		"          SELECT term, COUNT(DISTINCT docid) AS doc_count_of_term  " + 
-		"          FROM features  " + 
-		"          GROUP BY term  " + 
-		"      )" + 
-		"      UPDATE features f " + 
-		"      SET f.df = df_tbl.doc_count_of_term" + 
-		"      FROM df_tbl" + 
-		"      WHERE f.term = df_tbl.term;" + 
-		"    END; $$;;";
+		"      UPDATE features" + 
+		"      SET df = df_tbl.doc_count_of_term" + 
+		"      FROM (" + 
+		"	  	  SELECT f2.term, COUNT(DISTINCT f2.docid) AS doc_count_of_term  " + 
+		"		  FROM features f2  " + 
+		"		  GROUP BY f2.term  " + 
+		"	  ) df_tbl" + 
+		"      WHERE features.term = df_tbl.term;" + 
+		"    END; $$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();
@@ -335,13 +329,13 @@ public class DatabaseCreator {
 		"    AS $$   " + 
 		"    BEGIN   " + 
 		"    WITH   " + 
-		"      docs_stats AS( -- # docid also being counted in getCollectionSize in dbhandler" + 
-		"          SELECT COUNT(docid) AS total_docs, AVG(num_of_terms) as avg_num_of_terms  " + 
+		"      docs_stats AS( " + 
+		"          SELECT COUNT(docid) num_docs, AVG(num_of_terms) avg_num_terms  " + 
 		"          FROM documents  " + 
 		"      )" + 
-		"      UPDATE doc_stats_table dst" + 
-		"      SET dst.total_docs = ds.total_docs," + 
-		"          dst.avg_num_of_terms = ds.avg_num_of_terms" + 
+		"      UPDATE doc_stats_table" + 
+		"      SET total_docs = ds.num_docs," + 
+		"          avg_num_of_terms = ds.avg_num_terms" + 
 		"      FROM docs_stats ds;" + 
 		"    END; $$;";
 		Statement statement = con.createStatement();

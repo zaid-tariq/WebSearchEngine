@@ -100,39 +100,76 @@ public class DatabaseCreator {
 
 	private void createFunctionDisjunctive_search(Connection connection) throws SQLException {
 		String query = 
-				"CREATE OR REPLACE FUNCTION get_docs_for_disjunctive_search(search_terms text[], required_terms text[], lang TEXT[])"
-				+ "    	RETURNS TABLE(docurl text, term text, tfidf real, okapi real)" 
-				+ "    	LANGUAGE 'plpgsql'"
-				+ "		AS $$" +
-						" BEGIN" + 
-						"	CREATE TEMP TABLE search_terms_table(term text);		" + 
-						"	INSERT INTO search_terms_table SELECT unnest(search_terms); " + 
-						"	CREATE TEMP TABLE required_terms_table(term text);		" + 
-						"	INSERT INTO required_terms_table SELECT unnest(required_terms); " + 
-						"	RETURN QUERY" + 
-						"			WITH" + 
-						" 			filtered_docs_keywords AS(" + 
-						" 							SELECT f1.docid				" + 
-						" 							FROM features f1				" + 
-						" 							GROUP BY f1.docid 				" + 
-						" 							HAVING " + 
-						" 								NOT EXISTS(					" + 
-						"	 								SELECT * FROM required_terms_table 					" + 
-						"	 								EXCEPT SELECT unnest(array_agg(f1.term))				" + 
-						"	 								)" + 
-						"	 							AND EXISTS(					" + 
-						"		 							(SELECT * FROM search_terms_table UNION SELECT * FROM required_terms_table) 						" + 
-						"		 							INTERSECT " + 
-						"		 							SELECT unnest(array_agg(f1.term))" + 
-						"		 						)			" + 
-						" 							)					" + 
-						" 						SELECT d.url, f.term, f.score_tfidf, f.score_okapi" + 
-						" 		 				from features f, filtered_docs_keywords fd, documents d				" + 
-						" 		 				WHERE 	f.docid = fd.docid 						" + 
-						" 		 				AND f.docid = d.docid"
-						+ "						AND d.language = ANY(lang)			" + 
-						" 		 				ORDER BY d.docid;	" + 
-						" END; $$;";
+				"CREATE OR REPLACE FUNCTION get_docs_for_disjunctive_search(search_terms text[], required_terms text[], lang TEXT[]) " + 
+				"RETURNS TABLE(docurl text, term text, tfidf real, okapi real) " + 
+				"LANGUAGE 'plpgsql' " + 
+				"AS $$ " + 
+				"BEGIN    " + 
+				"" + 
+				"	CREATE TEMP TABLE required_terms_table AS" + 
+				"	  SELECT unnest(required_terms) term;" + 
+				"	  " + 
+				"	 CREATE TEMP TABLE search_terms_table AS" + 
+				"	  SELECT unnest(search_terms) term;" + 
+				"" + 
+				"	CREATE TEMP TABLE expanded_terms AS" + 
+				"		SELECT t2.elem term, elem2 syn" + 
+				"		FROM" + 
+				"		(" + 
+				"			select *" + 
+				"			from search_terms_table st," + 
+				"			unnest(string_to_array(split_part(st.term, '=', 1), ':')) elem" + 
+				"		  )  t2 " + 
+				"		  LEFT JOIN (" + 
+				"			select *" + 
+				"			from search_terms_table st," + 
+				"			unnest(string_to_array(split_part(st.term, '=', 1), ':')) elem," + 
+				"			unnest(string_to_array(split_part(st.term, '=', 2), ':')) elem2" + 
+				"		  )  t3" + 
+				"		  ON" + 
+				"		  t2.elem = t3.elem;" + 
+				"" + 
+				"    --TODO: use the collection_vocab table to find most frequent terms from the synonyms " + 
+				"    --and choose top 5 for each term" + 
+				"" + 
+				"  CREATE TEMP TABLE combined_expanded_terms (term text);" + 
+				"  INSERT INTO combined_expanded_terms" + 
+				"    SELECT * " + 
+				"    FROM  (" + 
+				"        SELECT syn FROM expanded_terms e1" + 
+				"        UNION SELECT e1.term FROM expanded_terms e1" + 
+				"        UNION SELECT e2.term FROM required_terms_table e2" + 
+				"	) s;" + 
+				"    " + 
+				"" + 
+				"  RETURN QUERY" + 
+				" 	SELECT d.url, f3.term, f3.score_tfidf, f3.score_okapi  " + 
+				"	FROM(" + 
+				"		SELECT f.docid" + 
+				"		FROM features f  " + 
+				"		GROUP BY f.docid   " + 
+				"		HAVING   " + 
+				"		   NOT EXISTS(           " + 
+				"		   SELECT * FROM required_terms_table            " + 
+				"		   EXCEPT SELECT unnest(array_agg(f.term) )          " + 
+				"		   )  " + 
+				"		 AND EXISTS(           " + 
+				"			SELECT * FROM combined_expanded_terms             " + 
+				"			INTERSECT   " + 
+				"			SELECT unnest(array_agg(f.term) )  " + 
+				"		 )" + 
+				"		) f2 JOIN documents d ON f2.docid = d.docid  " + 
+				"		JOIN features f3 ON f2.docid=f3.docid" + 
+				"		JOIN combined_expanded_terms cet ON f3.term=cet.term		" + 
+				"		WHERE d.language = ANY(lang);  " + 
+				"" + 
+				"  DROP TABLE expanded_terms;" + 
+				"  DROP TABLE combined_expanded_terms;" + 
+				"  DROP TABLE required_terms_table;" + 
+				"  DROP TABLE search_terms_table;" + 
+				"" + 
+				"  RETURN; " + 
+				"END; $$;";
 				Statement statement = connection.createStatement();
 				statement.execute(query);
 				statement.close();

@@ -23,10 +23,9 @@ public final class QueryExpansion {
 	
 	static List<String> expandQuery(List<String> a_searchTerms) throws JWNLException {
 		/*
-		 * function to fetch all synonyms and other expansion terms from the dictionary/thesauraus and return CNF
-		 * 
+		 * function to fetch all synonyms from the wordnet and return CNF
 			stem the terms ?
-				Problem here, cuz we dont have entity matching for now. So the term "new york city" which is one entity will also be tokenized and stemmed
+				Problem here, cuz we dont have entity matching for now. So the term "new york city" which is one entity will also be tokenized and stemmed.
 				Also, if I stem, I lose some words, for example foodie turn to foodi, which gives no synonyms.
 					but if I dont stem then I still lose words. For example "runs" gives no synonyms
 			create CNF of the query with these terms
@@ -92,9 +91,16 @@ public final class QueryExpansion {
 	
 	static String concatenateStringForCNF(String term, Set<String> terms) {
 		String concat = term;
-		for(String syn : terms)
-			concat += ":"+syn;
-		//System.out.println(concat);
+		boolean isFirst = true;
+		for(String syn : terms) {
+			if(isFirst) {
+				isFirst = false;
+				concat += "=";
+			}
+			else concat += ":";
+			concat += syn;
+		}
+		System.out.println(concat);
 		return concat;
 	}
 	

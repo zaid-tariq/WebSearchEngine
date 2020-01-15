@@ -2,6 +2,9 @@ package com.example.main.backend.utils;
 
 import java.util.TreeMap;
 
+import com.example.main.backend.Stemmer;
+import com.example.main.backend.dao.Snippet;
+
 /**
  * NOTICE: The implementation of that class is based on the following paper:
  * https://cs.pomona.edu/~dkauchak/ir_project/whitepapers/Snippet-IL.pdf
@@ -13,15 +16,17 @@ public class SnippetGenerator {
 	private TreeMap<String, Integer> occurrences;
 	private String[] content;
 	private DPEntry[][] dpTable;
+	private boolean withStemming;
 
-	public SnippetGenerator(String[] content, TreeMap<String, Integer> occurrences, int k) {
+	public SnippetGenerator(String[] content, TreeMap<String, Integer> occurrences, int k, boolean withStemming) {
 		this.k = k;
 		this.occurrences = occurrences;
 		this.content = content;
 		this.dpTable = new DPEntry[content.length][content.length];
+		this.withStemming = withStemming;
 	}
 
-	public Object[] generateSnippet() {
+	public Snippet generateSnippet() {
 		dynamicProgramming(0, content.length - 1);
 
 		String s = "";
@@ -34,7 +39,7 @@ public class SnippetGenerator {
 			}
 		}
 
-		return new Object[] { s, dpTable[0][content.length - 1].score };
+		return new Snippet(s, dpTable[0][content.length - 1].score);
 	}
 
 	private double dynamicProgramming(int i, int j) {
@@ -43,7 +48,6 @@ public class SnippetGenerator {
 		}
 
 		if (j - i <= 4) {
-			System.out.println("Call: " + i + " " + j);
 			this.dpTable[i][j] = new DPEntry(i, j, getScoreForTermAt(i));
 			return getScoreForTermAt(i);
 		} else if (j - i > k) {
@@ -75,7 +79,15 @@ public class SnippetGenerator {
 	}
 
 	private double getScoreForTermAt(int position) {
-		return occurrences.getOrDefault(content[position], -1);
+		String word = content[position];
+		if(withStemming) {
+			Stemmer stemmer = new Stemmer();
+			stemmer.add(content[position].toLowerCase().toCharArray(),content[position].length());
+			stemmer.stem();
+			word = stemmer.toString();
+		}
+		
+		return occurrences.getOrDefault(word, -1);
 	}
 
 	private double getScoreForTermsInRange(int i, int j) {

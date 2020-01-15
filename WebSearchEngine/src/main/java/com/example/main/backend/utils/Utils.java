@@ -12,6 +12,9 @@ import java.util.regex.Pattern;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.core.io.ClassPathResource;
 
+import com.example.main.backend.Stemmer;
+import com.example.main.backend.dao.Snippet;
+
 public class Utils {
 
 	public static File createTempFileFromInputStream(String a_resourceName) throws IOException {
@@ -61,7 +64,8 @@ public class Utils {
 		TreeMap<String, Integer> map = new TreeMap<String, Integer>();
 
 		for (String term : terms) {
-			String input = content;
+			term = term.toLowerCase();
+			String input = content.toLowerCase();
 			int index = input.indexOf(term);
 			int occurrences = 0;
 			while (index != -1) {
@@ -86,10 +90,10 @@ public class Utils {
 		return minString;
 	}
 	
-	public static Object[] getBestSnippet(List<Object[]> snippets) {
-		Object[] best = null;
-		for(Object[] s: snippets) {
-			if(best == null || (double)best[1] < (double)s[1]) {
+	public static Snippet getBestSnippet(List<Snippet> snippets) {
+		Snippet best = null;
+		for(Snippet s: snippets) {
+			if(best == null || best.getScore() < s.getScore()) {
 				best = s;
 			}
 		}
@@ -104,5 +108,20 @@ public class Utils {
 	 */
 	public static String wrapStringWithHtmlTag(String htmlTag, String content) {
 		return "<"+htmlTag+">"+content+"</"+htmlTag+">";
+	}
+	
+	public static String toStemmed(String s) {
+		String stemmedContent = "";
+		Stemmer stemmer = new Stemmer();
+		for (String t : s.split("\\s+")) {
+			stemmer.add(t.toCharArray(), t.length());
+			stemmer.stem();
+			if (stemmedContent.equals("")) {
+				stemmedContent += stemmer.toString();
+			} else {
+				stemmedContent += " " + stemmer.toString();
+			}
+		}
+		return stemmedContent;
 	}
 }

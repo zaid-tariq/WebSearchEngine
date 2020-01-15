@@ -5,15 +5,17 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.example.main.backend.dao.Snippet;
+
 public class SearchResultResponse {
 	
 	public class SearchResultItem{
 		public int rank;
 		public String url;
 		public float score;
-		public String snippet;
+		public Snippet snippet;
 		
-		public SearchResultItem(int r, String u, float s, String snippet) {
+		public SearchResultItem(int r, String u, float s, Snippet snippet) {
 			this.rank = r;
 			this.url = u;
 			this.score = s;
@@ -44,11 +46,11 @@ public class SearchResultResponse {
 			this.score = score;
 		}
 		
-		public String getSnippet() {
+		public Snippet getSnippet() {
 			return snippet;
 		}
 		
-		public void setSnippet(String snippet) {
+		public void setSnippet(Snippet snippet) {
 			this.snippet = snippet;
 		}
 	}
@@ -100,7 +102,7 @@ public class SearchResultResponse {
 		this.stat.add(new StatItem(df, term));
 	}
 	
-	public void addSearchResultItem(int rank, String url, float score, String snippet) {
+	public void addSearchResultItem(int rank, String url, float score, Snippet snippet) {
 		this.resultList.add(new SearchResultItem(rank, url, score, snippet));
 	}
 	

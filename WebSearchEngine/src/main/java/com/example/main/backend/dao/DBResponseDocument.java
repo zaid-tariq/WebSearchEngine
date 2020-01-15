@@ -1,6 +1,7 @@
 package com.example.main.backend.dao;
 
 import java.util.HashMap;
+import java.util.List;
 import java.lang.Math;
 
 public class DBResponseDocument {
@@ -18,6 +19,7 @@ public class DBResponseDocument {
 	public int scoringMethod;
 	double alpha = 0.7;
 	private String snippet;
+	private List<String> notOccurringTerms;
 
 	public DBResponseDocument(String url2) {
 		this.url = url2;
@@ -91,6 +93,14 @@ public class DBResponseDocument {
 	
 	public String getUrl() {
 		return this.url;
+	}
+	
+	public List<String> getNotOccurringTerms(){
+		return this.notOccurringTerms;
+	}
+	
+	public void setNotOccurringTerms(List<String> notOccuringTerms) {
+		this.notOccurringTerms = notOccuringTerms;
 	}
 
 }

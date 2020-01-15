@@ -28,6 +28,7 @@ import org.springframework.stereotype.Repository;
 
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.dao.DBResponseDocument;
+import com.example.main.backend.dao.Snippet;
 import com.example.main.backend.pagerank.PageRank;
 import com.example.main.backend.utils.SnippetGenerator;
 import com.example.main.backend.utils.Utils;
@@ -61,7 +62,14 @@ public class DBHandler {
 			SearchResultResponse a_response) throws SQLException {
 
 		Connection con = getConnection();
-		List<String> searchTerms = Utils.getTermsInQuotes(query);
+		List<String> searchTerms = new ArrayList<String>();
+		if (languages.length == 1 && languages[0].equalsIgnoreCase(HTMLDocument.Language.ENGLISH)) {
+			for (String t : Utils.getTermsInQuotes(query)) {
+				searchTerms.add(Utils.toStemmed(t));
+			}
+		} else {
+			searchTerms = Utils.getTermsInQuotes(query);
+		}
 		String[] searchTermsArr = Utils.getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
 		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_conjunctive_search(?,?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
@@ -76,9 +84,25 @@ public class DBHandler {
 
 		Connection con = getConnection();
 
-		List<String> searchTerms = Utils.getTermsWithoutQuotes(query);
+		query = query.toLowerCase();
+
+		List<String> searchTerms = new ArrayList<String>();
+		List<String> requiredTerms = new ArrayList<>();
+
+		// TODO: how to make it for german and english search together?
+		if (languages.length == 1 && languages[0].equalsIgnoreCase(HTMLDocument.Language.ENGLISH)) {
+			for (String t : Utils.getTermsWithoutQuotes(query)) {
+				searchTerms.add(Utils.toStemmed(t));
+			}
+			for (String t : Utils.getTermsInQuotes(query)) {
+				requiredTerms.add(Utils.toStemmed(t));
+			}
+		} else {
+			searchTerms = Utils.getTermsWithoutQuotes(query);
+			requiredTerms = Utils.getTermsInQuotes(query);
+		}
+
 		String[] searchTermsArr = (String[]) searchTerms.toArray(new String[searchTerms.size()]);
-		List<String> requiredTerms = Utils.getTermsInQuotes(query);
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
 
 		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?,?)");
@@ -134,7 +158,7 @@ public class DBHandler {
 			a_response = new SearchResultResponse();
 		for (DBResponseDocument resDoc : sortedSet) {
 			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.getCosSimScore(),
-					createSnippet(getContentByURL(resDoc.getUrl()), searchTerms));
+					createSnippet(getContentByURL(resDoc.getUrl()), searchTerms, getLanguageByURL(resDoc.getUrl())));
 			if (rank > k_limit)
 				break;
 		}
@@ -637,6 +661,26 @@ public class DBHandler {
 		return content;
 	}
 
+	public String getLanguageByURL(String url) throws SQLException {
+		Connection con = getConnection();
+
+		PreparedStatement ps = con.prepareStatement("SELECT language FROM documents WHERE url = ?");
+		ps.setString(1, url);
+		ps.execute();
+		ResultSet rs = ps.getResultSet();
+		if (!rs.next()) {
+			return null;
+		}
+
+		String language = rs.getString(1);
+
+		rs.close();
+		ps.close();
+		con.close();
+
+		return language;
+	}
+
 	/**
 	 * Creates a preview snippet which has a maximum length of 32 terms
 	 * 
@@ -644,8 +688,37 @@ public class DBHandler {
 	 * @param SearchTerms search terms to look for in the snippet
 	 * @return Preview snippet with a maximum length of 32 terms
 	 */
-	private String createSnippet(String content, List<String> terms) {
-		TreeMap<String, Integer> termsFrequency = Utils.getOrderedTermsByFrequency(terms, content);
+	private Snippet createSnippet(String content, List<String> terms, String language) {
+		Stemmer stemmer = new Stemmer();
+
+		TreeMap<String, Integer> termsFrequency;
+		boolean withStemming = false;
+		if (language.equals(HTMLDocument.Language.ENGLISH)) {
+			// provide also the stemmed words
+			withStemming = true;
+			List<String> stemmedTerms = new ArrayList<String>();
+			for (String t : terms) {
+				stemmer.add(t.toCharArray(), t.length());
+				stemmer.stem();
+				stemmedTerms.add(stemmer.toString());
+			}
+
+			String stemmedContent = "";
+			for (String t : content.split("\\s+")) {
+				stemmer.add(t.toCharArray(), t.length());
+				stemmer.stem();
+				if (stemmedContent.equals("")) {
+					stemmedContent += stemmer.toString();
+				} else {
+					stemmedContent += " " + stemmer.toString();
+				}
+			}
+
+			termsFrequency = Utils.getOrderedTermsByFrequency(stemmedTerms, stemmedContent);
+		} else {
+			termsFrequency = Utils.getOrderedTermsByFrequency(terms, content);
+		}
+
 		String specialChars = "(\\>|\\/|&nbsp;|&bull;|&amp;|&#39;|\\,|\\:|\\;|\\[|\\]|\\{|\\}|\\||\\+|\\-|\\*|\\)|\\(|\\=|\\\"|\\|'|'|&|…|#|_)";
 		String[] split = content.replaceAll(specialChars, " ").split("\\s+");
 		List<String[]> s = new ArrayList<>();
@@ -655,40 +728,52 @@ public class DBHandler {
 			x -= 5;
 		}
 
-		List<Object[]> snippets = new ArrayList<>();
+		List<Snippet> snippets = new ArrayList<Snippet>();
 		for (String[] a : s) {
-			SnippetGenerator sg = new SnippetGenerator(a, termsFrequency, 32);
+			SnippetGenerator sg = new SnippetGenerator(a, termsFrequency, 32, withStemming);
 			snippets.add(sg.generateSnippet());
 		}
 
 		int amountTerms = 0;
 		String completeSnippet = "";
-		System.out.println(snippets.size());
-		System.out.println();
 		while (amountTerms < 32 && snippets.size() > 0) {
-			Object[] next = Utils.getBestSnippet(snippets);
-			System.out.println(next[0]);
-			if (((String) next[0]).split(" ").length + amountTerms <= 32) {
+			Snippet next = Utils.getBestSnippet(snippets);
+			if (next.getText().split(" ").length + amountTerms <= 32) {
 				if (completeSnippet.equals("")) {
-					completeSnippet += next[0];
+					completeSnippet += next.getText();
 				} else {
-					completeSnippet += " ... " + next[0];
+					completeSnippet += " ... " + next.getText();
 				}
-				amountTerms += ((String) next[0]).split(" ").length;
+				amountTerms += next.getText().split(" ").length;
 			}
 			snippets.remove(next);
 		}
 
 		String markedString = "";
-		List<String> lowerCaseTerms = new ArrayList<String>();
+		Set<String> lowerCaseTerms = new HashSet<String>();
 		for (String t : terms) {
 			lowerCaseTerms.add(t.toLowerCase());
-			System.out.println("Search Terms: " + t.toLowerCase());
+		}
+
+		if (language.equals(HTMLDocument.Language.ENGLISH)) {
+			// provide also the stemmed words
+			for (String t : terms) {
+				stemmer.add(t.toLowerCase().toCharArray(), t.length());
+				stemmer.stem();
+				lowerCaseTerms.add(stemmer.toString().toLowerCase());
+			}
 		}
 
 		for (String snip : completeSnippet.split("\\s+")) {
-			System.out.println(snip.toLowerCase());
-			if (lowerCaseTerms.contains(snip.toLowerCase())) {
+			// Do that only if document is english version
+			String word = snip;
+			if (language.equals(HTMLDocument.Language.ENGLISH)) {
+				stemmer.add(snip.toCharArray(), snip.length());
+				stemmer.stem();
+				word = stemmer.toString();
+			}
+
+			if (lowerCaseTerms.contains(word.toLowerCase())) {
 				if (markedString.equals("")) {
 					markedString += Utils.wrapStringWithHtmlTag("b", snip);
 				} else {
@@ -703,6 +788,14 @@ public class DBHandler {
 			}
 		}
 
-		return markedString;
+		List<String> notExists = new ArrayList<String>();
+		String markedLowerCaseString = markedString.toLowerCase();
+		for (String term : lowerCaseTerms) {
+			if (!markedLowerCaseString.contains(term)) {
+				notExists.add(term);
+			}
+		}
+
+		return new Snippet(markedString, -1, notExists);
 	}
 }

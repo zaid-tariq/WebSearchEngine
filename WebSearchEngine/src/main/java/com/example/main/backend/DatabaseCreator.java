@@ -28,6 +28,7 @@ public class DatabaseCreator {
 			createUpdateScoresunction(connection);
 			createFunctionConjunctive_search(connection);
 			createFunctionDisjunctive_search(connection);
+			createFunctionDisjunctiveImage_search(connection);
 			createStatsFunction(connection);
 			createIndices(connection);
 			create_function_get_related_terms_to_less_frequent_terms(connection);
@@ -122,6 +123,46 @@ public class DatabaseCreator {
 						" 							)					" + 
 						" 						SELECT d.url, f.term, f.score_tfidf, f.score_okapi, f.score_combined" + 
 						" 		 				from features f, filtered_docs_keywords fd, documents d				" + 
+						" 		 				WHERE 	f.docid = fd.docid 						" + 
+						" 		 				AND f.docid = d.docid"
+						+ "						AND d.language = ANY(lang)			" + 
+						" 		 				ORDER BY d.docid;	" + 
+						" END; $$;";
+				Statement statement = connection.createStatement();
+				statement.execute(query);
+				statement.close();
+	}
+	
+	public void createFunctionDisjunctiveImage_search(Connection connection) throws SQLException {
+		String query = 
+				"CREATE OR REPLACE FUNCTION get_images_for_disjunctive_search(search_terms text[], required_terms text[], lang TEXT[])"
+				+ "    	RETURNS TABLE(imageurl text, docurl text, term text, exponential double precision)" 
+				+ "    	LANGUAGE 'plpgsql'"
+				+ "		AS $$" +
+						" BEGIN" + 
+						"	CREATE TEMP TABLE search_terms_table(term text);		" + 
+						"	INSERT INTO search_terms_table SELECT unnest(search_terms); " + 
+						"	CREATE TEMP TABLE required_terms_table(term text);		" + 
+						"	INSERT INTO required_terms_table SELECT unnest(required_terms); " + 
+						"	RETURN QUERY" + 
+						"			WITH" + 
+						" 			filtered_docs_keywords AS(" + 
+						" 							SELECT f1.docid				" + 
+						" 							FROM imagefeatures f1				" + 
+						" 							GROUP BY f1.docid 				" + 
+						" 							HAVING " + 
+						" 								NOT EXISTS(					" + 
+						"	 								SELECT * FROM required_terms_table 					" + 
+						"	 								EXCEPT SELECT unnest(array_agg(f1.term))				" + 
+						"	 								)" + 
+						"	 							AND EXISTS(					" + 
+						"		 							(SELECT * FROM search_terms_table UNION SELECT * FROM required_terms_table) 						" + 
+						"		 							INTERSECT " + 
+						"		 							SELECT unnest(array_agg(f1.term))" + 
+						"		 						)			" + 
+						" 							)					" + 
+						" 						SELECT f.imageurl, d.url, f.term, f.score_exponential" + 
+						" 		 				from imagefeatures f, filtered_docs_keywords fd, documents d				" + 
 						" 		 				WHERE 	f.docid = fd.docid 						" + 
 						" 		 				AND f.docid = d.docid"
 						+ "						AND d.language = ANY(lang)			" + 

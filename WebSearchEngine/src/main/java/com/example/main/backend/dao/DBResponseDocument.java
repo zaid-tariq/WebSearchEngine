@@ -10,9 +10,11 @@ public class DBResponseDocument {
 		public Float okapi_score;
 		public Float tfidf_score;
 		public Float combined;
+		public Double exponential_score;
 	}
 
 	public String url;
+	public String url2;
 	public HashMap<String, Scores> terms_scores;
 	private double cosSim;
 	public double pageRank;
@@ -25,10 +27,11 @@ public class DBResponseDocument {
 		this.url = url2;
 	}
 
-	public void add_term(String term, float tfidf_score, float okapi_score) {
+	public void add_term(String term, float tfidf_score, float okapi_score, double exponential_score) {
 		Scores scores = new Scores();
 		scores.okapi_score = okapi_score;
 		scores.tfidf_score = tfidf_score;
+		scores.exponential_score = exponential_score;
 		if (this.terms_scores == null)
 			terms_scores = new HashMap<String, Scores>();
 

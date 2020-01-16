@@ -3,4 +3,5 @@ $(document).ready(function() {
     	console.log("HELLO");
         window.document.location = $(this).data("href");
     });
+    
 });

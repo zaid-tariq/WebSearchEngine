@@ -16,10 +16,13 @@ import com.example.main.backend.utils.Utils;
 
 @Component
 public class SearchAPI {
-	
+
 	@Autowired
 	DBHandler db;
 	
+	public static final int DOCUMENT_MODE = 1;
+	public static final int IMAGE_MODE = 2;
+
 	class Query {
 		public String query;
 		public URL site;
@@ -71,7 +74,7 @@ public class SearchAPI {
 			}
 			// convert to url
 			try {
-				URL url = new URL("https",site,"/");
+				URL url = new URL("https", site, "/");
 				q.site = url;
 			} catch (Exception ex) {
 				System.out.println("Not a valid site. Operator ignored.");
@@ -86,7 +89,7 @@ public class SearchAPI {
 		SearchResultResponse res = new SearchResultResponse(q.query, limit);
 
 		try {
-			res = db.searchConjunctiveQuery(q.query, limit, languages, res);
+			res = db.searchConjunctiveQuery(q.query, limit, languages, res, SearchAPI.DOCUMENT_MODE);
 			int cw = db.getCollectionSize();
 			res.setCollectionSize(cw);
 			res = db.getStats(q.query, res);
@@ -94,18 +97,18 @@ public class SearchAPI {
 			ex.printStackTrace();
 		} catch (Exception ex) {
 			ex.printStackTrace();
-		} 
+		}
 		res.filterResultsWithSite(q.site);
 		return res;
 	}
 
-	public SearchResultResponse searchAPIdisjunctive(String a_query, int limit, String[] languages, int scoringMethod) {
+	public SearchResultResponse searchAPIdisjunctive(String a_query, int limit, String[] languages, int scoringMethod, int searchMode) {
 
 		Query q = resolveSiteOperator(a_query);
 		SearchResultResponse res = new SearchResultResponse(q.query, limit);
 
 		try {
-			res = db.searchDisjunctiveQuery(q.query, limit, languages, res, scoringMethod);
+			res = db.searchDisjunctiveQuery(q.query, limit, languages, res, scoringMethod, searchMode);
 			int cw = db.getCollectionSize();
 			res.setCollectionSize(cw);
 			res = db.getStats(q.query, res);
@@ -120,7 +123,7 @@ public class SearchAPI {
 
 	public void updateScores() {
 		try {
-			db.computePageRank(0.1,0.001);
+			db.computePageRank(0.1, 0.001);
 			System.out.println("Computed PageRank");
 			db.updateScores();
 			System.out.println("Update Scores");
@@ -130,9 +133,9 @@ public class SearchAPI {
 			ex.printStackTrace();
 		}
 	}
-	
-	public String getDidYouMeanQuery(String query)  {
-		
+
+	public String getDidYouMeanQuery(String query) {
+
 		String altQuery = null;
 		Connection con = null;
 		try {
@@ -141,21 +144,21 @@ public class SearchAPI {
 			String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
 			con = db.getConnection();
 			SpellChecker spellChecker = new SpellChecker();
-			Map<String, List<Map.Entry<String, Integer>>> relTerms = spellChecker.findRelatedTermsForLessFrequentTerms(termsArr, con);
-			
+			Map<String, List<Map.Entry<String, Integer>>> relTerms = spellChecker
+					.findRelatedTermsForLessFrequentTerms(termsArr, con);
+
 			altQuery = spellChecker.findBestAlternateQuery(terms, relTerms, con);
 		} catch (Exception e) {
 			e.printStackTrace();
-		}
-		finally {
-			if(con != null)
+		} finally {
+			if (con != null)
 				try {
 					con.close();
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
 		}
-		
+
 		return altQuery;
 	}
 }

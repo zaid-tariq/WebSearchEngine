@@ -33,7 +33,7 @@ public class SearchAPIController {
 			@RequestParam(value = "k", defaultValue = "50") int limit, @RequestParam(value = "score") int scoringMethod) {
 		
 		//TODO: Insert language flag
-		SearchResultResponse res = searchApi.searchAPIdisjunctive(query, limit, new String[] {"english"},scoringMethod);
+		SearchResultResponse res = searchApi.searchAPIdisjunctive(query, limit, new String[] {"english"},scoringMethod, SearchAPI.DOCUMENT_MODE);
 		return ResponseEntity.ok().body(res);
 	}
 	

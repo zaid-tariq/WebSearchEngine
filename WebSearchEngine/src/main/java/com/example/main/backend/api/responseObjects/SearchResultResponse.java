@@ -12,6 +12,7 @@ public class SearchResultResponse {
 	public class SearchResultItem{
 		public int rank;
 		public String url;
+		public String url2;
 		public float score;
 		public Snippet snippet;
 		
@@ -36,6 +37,14 @@ public class SearchResultResponse {
 
 		public void setUrl(String url) {
 			this.url = url;
+		}
+		
+		public String getUrl2() {
+			return url2;
+		}
+
+		public void setUrl2(String url2) {
+			this.url2 = url2;
 		}
 
 		public float getScore() {
@@ -104,6 +113,12 @@ public class SearchResultResponse {
 	
 	public void addSearchResultItem(int rank, String url, float score, Snippet snippet) {
 		this.resultList.add(new SearchResultItem(rank, url, score, snippet));
+	}
+	
+	public void addSearchResultItem(int rank, String url, String url2, float score, Snippet snippet) {
+		SearchResultItem i = new SearchResultItem(rank, url, score, snippet);
+		i.setUrl2(url2);
+		this.resultList.add(i);
 	}
 	
 	public void setCollectionSize(int size) {

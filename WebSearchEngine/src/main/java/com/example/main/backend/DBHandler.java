@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
+import com.example.main.backend.api.SearchAPI;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.dao.DBResponseDocument;
 import com.example.main.backend.dao.Snippet;
@@ -60,7 +61,7 @@ public class DBHandler {
 	}
 
 	public SearchResultResponse searchConjunctiveQuery(String query, int k_limit, String[] languages,
-			SearchResultResponse a_response) throws SQLException {
+			SearchResultResponse a_response, int searchMode) throws SQLException {
 
 		Connection con = getConnection();
 		List<String> searchTerms = new ArrayList<String>();
@@ -77,11 +78,13 @@ public class DBHandler {
 		sql.setArray(2, con.createArrayOf("text", languages));
 		sql.execute();
 		ResultSet results = sql.getResultSet();
-		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, 3); // closes connection too
+		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, 3, searchMode); // closes
+																											// connection
+																											// too
 	}
 
 	public SearchResultResponse searchDisjunctiveQuery(String query, int k_limit, String[] languages,
-			SearchResultResponse a_response, int scoringMethod) throws SQLException {
+			SearchResultResponse a_response, int scoringMethod, int searchMode) throws SQLException {
 
 		Connection con = getConnection();
 
@@ -106,34 +109,60 @@ public class DBHandler {
 		String[] searchTermsArr = (String[]) searchTerms.toArray(new String[searchTerms.size()]);
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
 
-		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?,?)");
-		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
-		sql.setArray(2, con.createArrayOf("text", requiredTermsArr));
-		sql.setArray(3, con.createArrayOf("text", languages));
-		sql.execute();
-		ResultSet results = sql.getResultSet();
-		searchTerms.addAll(requiredTerms); // combine all terms
-		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, scoringMethod); // closes
-		// connection
-		// too
+		PreparedStatement sql = null;
+		if (searchMode == SearchAPI.DOCUMENT_MODE) {
+			sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?,?)");
+		} else if (searchMode == SearchAPI.IMAGE_MODE) {
+			sql = con.prepareStatement("SELECT * from get_images_for_disjunctive_search(?,?,?)");
+		}
+		if (sql != null) {
+			sql.setArray(1, con.createArrayOf("text", searchTermsArr));
+			sql.setArray(2, con.createArrayOf("text", requiredTermsArr));
+			sql.setArray(3, con.createArrayOf("text", languages));
+			sql.execute();
+			ResultSet results = sql.getResultSet();
+			searchTerms.addAll(requiredTerms); // combine all terms
+			return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, scoringMethod,
+					searchMode);
+		}
+		throw new RuntimeException("You don't selected any search Mode");
 	}
 
 	private SearchResultResponse processSearchQueryResultSet(Connection con, ResultSet results,
-			List<String> searchTerms, int k_limit, SearchResultResponse a_response, int scoringMethod)
+			List<String> searchTerms, int k_limit, SearchResultResponse a_response, int scoringMethod, int searchMode)
 			throws SQLException {
 
 		HashMap<String, DBResponseDocument> resDocs = new HashMap<String, DBResponseDocument>();
 
-		while (results.next()) {
-			String url = results.getString(1);
-			String term = results.getString(2);
-			float score_tfidf = results.getFloat(3);
-			float score_okapi = results.getFloat(4);
-			if (!resDocs.containsKey(url))
-				resDocs.put(url, new DBResponseDocument(url));
-			DBResponseDocument doc = resDocs.get(url);
-			doc.add_term(term, score_tfidf, score_okapi);
-			doc.scoringMethod = scoringMethod;
+		if (searchMode == SearchAPI.DOCUMENT_MODE) {
+			while (results.next()) {
+				String url = results.getString(1);
+				String term = results.getString(2);
+				float score_tfidf = results.getFloat(3);
+				float score_okapi = results.getFloat(4);
+				if (!resDocs.containsKey(url))
+					resDocs.put(url, new DBResponseDocument(url));
+				DBResponseDocument doc = resDocs.get(url);
+				doc.add_term(term, score_tfidf, score_okapi, 0);
+				doc.scoringMethod = scoringMethod;
+			}
+		} else if (searchMode == SearchAPI.IMAGE_MODE) {
+			while (results.next()) {
+				String url = results.getString(1);
+				String url2 = results.getString(2);
+				String term = results.getString(3);
+				double score_exponential = results.getDouble(4);
+				if (!resDocs.containsKey(url)) {
+					DBResponseDocument r = new DBResponseDocument(url);
+					r.url2 = url2;
+					resDocs.put(url, r);
+				}
+				DBResponseDocument doc = resDocs.get(url);
+				doc.add_term(term, 0, 0, score_exponential);
+				doc.scoringMethod = scoringMethod;
+			}
+		} else {
+			throw new RuntimeException("Not selected search mode");
 		}
 		results.close();
 		con.close();
@@ -142,7 +171,7 @@ public class DBHandler {
 		// queryDoc.scoringMethod = scoringMethod;
 
 		for (String t : searchTerms) {
-			queryDoc.add_term(t, 1, 1);
+			queryDoc.add_term(t, 1, 1, 1);
 		}
 
 		ArrayList<DBResponseDocument> sortedSet = new ArrayList<DBResponseDocument>();
@@ -157,11 +186,20 @@ public class DBHandler {
 		int rank = 1;
 		if (a_response == null)
 			a_response = new SearchResultResponse();
-		for (DBResponseDocument resDoc : sortedSet) {
-			a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.getCosSimScore(),
-					createSnippet(getContentByURL(resDoc.getUrl()), searchTerms, getLanguageByURL(resDoc.getUrl())));
-			if (rank > k_limit)
-				break;
+
+		if (searchMode == SearchAPI.DOCUMENT_MODE) {
+			for (DBResponseDocument resDoc : sortedSet) {
+				a_response.addSearchResultItem(rank++, resDoc.url, (float) resDoc.getCosSimScore(), createSnippet(
+						getContentByURL(resDoc.getUrl()), searchTerms, getLanguageByURL(resDoc.getUrl())));
+				if (rank > k_limit)
+					break;
+			}
+		} else if (searchMode == SearchAPI.IMAGE_MODE) {
+			for (DBResponseDocument resDoc : sortedSet) {
+				a_response.addSearchResultItem(rank++, resDoc.url, resDoc.url2, (float) resDoc.getCosSimScore(), new Snippet("No snippet available", -1));
+				if (rank > k_limit)
+					break;
+			}
 		}
 
 		return a_response;
@@ -467,8 +505,8 @@ public class DBHandler {
 	}
 
 	public void insertImageDataToDatabase(HTMLDocument doc, Connection con) throws SQLException {
-		PreparedStatement stmtInsertImageFeature = con
-				.prepareStatement("INSERT INTO imagefeatures (imageurl, docid, term, ndist,score_exponential) VALUES (?,?,?,?,?)");
+		PreparedStatement stmtInsertImageFeature = con.prepareStatement(
+				"INSERT INTO imagefeatures (imageurl, docid, term, ndist,score_exponential) VALUES (?,?,?,?,?)");
 		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
 		stmtgetDocId.setString(1, doc.getUrl().toString());
 		stmtgetDocId.execute();

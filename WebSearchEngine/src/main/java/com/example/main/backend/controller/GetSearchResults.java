@@ -22,16 +22,23 @@ public class GetSearchResults {
 	public String results(Model model, @RequestParam(value = "query") String query,
 			@RequestParam(value = "limit", defaultValue = "20") int limit,
 			@RequestParam(value = "lang") String languages, @RequestParam(value = "scoringMethod") int scoringMethod) {
-		model.addAttribute("results", api.searchAPIdisjunctive(query, limit, languages.split(" "), 3).resultList);
+		model.addAttribute("results", api.searchAPIdisjunctive(query, limit, languages.split(" "), scoringMethod,
+				SearchAPI.DOCUMENT_MODE).resultList);
 		model.addAttribute("didYouMean", api.getDidYouMeanQuery(query));
 		return "results";
 	}
-	
+
 	@RequestMapping("is-project/images.html")
-	public String images(Model model, @RequestParam(value = "query") String query,
+	public String images(Model model) {
+		return "images";
+	}
+
+	@RequestMapping("is-project/images-results")
+	public String imagesResults(Model model, @RequestParam(value = "query") String query,
 			@RequestParam(value = "limit", defaultValue = "20") int limit,
 			@RequestParam(value = "lang") String languages) {
-		model.addAttribute("results",api.search)
-		return "images";
+		model.addAttribute("results",
+				api.searchAPIdisjunctive(query, limit, languages.split(" "), 3, SearchAPI.IMAGE_MODE).getResultList());
+		return "images-results";
 	}
 }

@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import com.example.main.backend.DBHandler;
+import com.example.main.backend.api.SearchAPI;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 
 @Profile("cli")
@@ -24,10 +25,10 @@ public class CLI implements CommandLineRunner {
 			if (args[3].trim().equals("conjunctive")) {
 				String queryConjunctive = "\"" + args[1].trim() + "\"";
 				res = handler.searchConjunctiveQuery(queryConjunctive, Integer.parseInt(args[2].trim()),
-						new String[] { "english", "german" }, null);
+						new String[] { "english", "german" }, null, SearchAPI.DOCUMENT_MODE);
 			} else if (args[3].trim().equals("disjunctive"))
 				res = handler.searchDisjunctiveQuery(args[1].trim(), Integer.parseInt(args[2].trim()),
-						new String[] { "english", "german" }, null, 3);
+						new String[] { "english", "german" }, null, 3, SearchAPI.DOCUMENT_MODE);
 			else
 				throw new Exception("Choose either conjunctive or disjunctive query method");
 

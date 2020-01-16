@@ -221,7 +221,7 @@ public class DBHandler {
 		String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
 
 		Connection con = getConnection();
-		PreparedStatement sql = con.prepareStatement("SELECT * from get_term_frequencies(?)");
+		PreparedStatement sql = con.prepareStatement("SELECT * from get_doc_frequencies(?)");
 		sql.setArray(1, con.createArrayOf("text", termsArr));
 		sql.execute();
 		ResultSet results = sql.getResultSet();

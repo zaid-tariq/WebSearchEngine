@@ -286,7 +286,6 @@ public class DatabaseCreator {
 		statement.close();
 	}
 
-
 	private void createGetDocFrequenciesFunction(Connection con) throws SQLException {
 		String query = "CREATE OR REPLACE FUNCTION get_doc_frequencies(" + "    search_terms text[]" + ")"
 				+ "RETURNS TABLE(term text, df bigint) " + "LANGUAGE 'plpgsql' " + "AS $$ " + "BEGIN "
@@ -341,7 +340,6 @@ public class DatabaseCreator {
 		statement.execute(query);
 		statement.close();
 	}
-	
 	
 	private void createUpdateDocFrequenceFunction(Connection con) throws SQLException {
 		String query = 

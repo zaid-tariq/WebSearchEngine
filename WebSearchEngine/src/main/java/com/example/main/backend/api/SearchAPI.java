@@ -66,8 +66,8 @@ public class SearchAPI {
 		String altQuery = null;
 		Connection con = null;
 		try {
-			List<String> terms = Utils.getTermsWithoutQuotes(query);
-			terms.addAll(Utils.getTermsInQuotes(query));
+			List<String> terms = QueryParser.getTermsWithoutQuotes_2(query);
+			terms.addAll(QueryParser.getTermsInQuotes(query));
 			String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
 			con = db.getConnection();
 			SpellChecker spellChecker = new SpellChecker();

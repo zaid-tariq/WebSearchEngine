@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
@@ -89,19 +90,19 @@ public class DBHandler {
 		Connection con = getConnection();
 		List<String> searchTerms = new ArrayList<String>();
 		if (languages.length == 1 && languages[0].equalsIgnoreCase(HTMLDocument.Language.ENGLISH)) {
-			for (String t : Utils.getTermsInQuotes(query)) {
+			for (String t : QueryParser.getTermsInQuotes(query)) {
 				searchTerms.add(Utils.toStemmed(t));
 			}
 		} else {
-			searchTerms = Utils.getTermsInQuotes(query);
+			searchTerms = QueryParser.getTermsInQuotes(query);
 		}
-		String[] searchTermsArr = Utils.getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
+		String[] searchTermsArr = QueryParser.getTermsInQuotes(query).toArray(new String[searchTerms.size()]);
 		PreparedStatement sql = con.prepareStatement("SELECT * from get_docs_for_conjunctive_search(?,?)");
 		sql.setArray(1, con.createArrayOf("text", searchTermsArr));
 		sql.setArray(2, con.createArrayOf("text", languages));
 		sql.execute();
 		ResultSet results = sql.getResultSet();
-		return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, 3, searchMode); // closes
+		return processSearchQueryResultSet(con, results, searchTerms, searchTerms, k_limit, a_response, 3, searchMode); // closes
 																											// connection
 																											// too
 	}
@@ -112,12 +113,15 @@ public class DBHandler {
 		Connection con = getConnection();
 		query = query.toLowerCase();
 
-		List<String> searchTerms = QueryExpansion.expandQuery(Utils.getTermsWithoutQuotes(query));
-		List<String> requiredTerms = Utils.getTermsInQuotes(query);
-	
-		String[] searchTermsArr = (String[]) searchTerms.toArray(new String[searchTerms.size()]);
-		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
-
+		List<List<String>> searchTerms = QueryParser.getTermsWithoutQuotes(query);
+		List<String> expandedQueryTerms = QueryExpansion.expandQuery(searchTerms.get(QueryParser.TILDA_TERMS), searchTerms.get(QueryParser.NON_TILDA_TERMS));	
+		String[] expandedQueryTermsArr = (String[]) expandedQueryTerms.toArray(new String[searchTerms.size()]);
+		
+		List<String> requiredTerms = QueryParser.getTermsInQuotes(query);
+		String[] requiredTermsArr = new String[requiredTerms.size()];
+		for(int i = 0; i < requiredTerms.size(); i++)
+			requiredTermsArr[i] = Utils.stemTerm(requiredTerms.get(i));
+		
 		PreparedStatement sql = null;
 		if (searchMode == SearchAPI.DOCUMENT_MODE) {
 			sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?,?)");
@@ -125,23 +129,29 @@ public class DBHandler {
 			sql = con.prepareStatement("SELECT * from get_images_for_disjunctive_search(?,?,?)");
 		}
 		if (sql != null) {
-			sql.setArray(1, con.createArrayOf("text", searchTermsArr));
+			sql.setArray(1, con.createArrayOf("text", expandedQueryTermsArr));
 			sql.setArray(2, con.createArrayOf("text", requiredTermsArr));
 			sql.setArray(3, con.createArrayOf("text", languages));
 			sql.execute();
 			ResultSet results = sql.getResultSet();
-			searchTerms.addAll(requiredTerms); // combine all terms
-			return processSearchQueryResultSet(con, results, searchTerms, k_limit, a_response, scoringMethod,
+			List<String> allOriginalQueryTerms = new ArrayList<>();
+			allOriginalQueryTerms.addAll(requiredTerms);
+			allOriginalQueryTerms.addAll(searchTerms.get(QueryParser.NON_TILDA_TERMS));
+			allOriginalQueryTerms.addAll(searchTerms.get(QueryParser.TILDA_TERMS));
+			return processSearchQueryResultSet(con, results, allOriginalQueryTerms, expandedQueryTerms, k_limit, a_response, scoringMethod,
 					searchMode);
 		}
 		throw new RuntimeException("You don't selected any search Mode");
 	}
 
 	private SearchResultResponse processSearchQueryResultSet(Connection con, ResultSet results,
-			List<String> searchTerms, int k_limit, SearchResultResponse a_response, int scoringMethod, int searchMode)
+			List<String> searchTerms, List<String> expandedQueryTerms, int k_limit, SearchResultResponse a_response, int scoringMethod, int searchMode)
 			throws SQLException {
 
 		HashMap<String, DBResponseDocument> resDocs = new HashMap<String, DBResponseDocument>();
+		
+		Map<String, Boolean> queryTermsMap = Utils.splitExpandedQuery(expandedQueryTerms);
+		
 
 		if (searchMode == SearchAPI.DOCUMENT_MODE) {
 			while (results.next()) {
@@ -149,6 +159,10 @@ public class DBHandler {
 				String term = results.getString(2);
 				float score_tfidf = results.getFloat(3);
 				float score_okapi = results.getFloat(4);
+				if(queryTermsMap.get(term) == false) { //term is not in base query
+					score_tfidf /= 3; //weigh the expansion terms less than query terms by a factor of 3
+					score_okapi /= 3;
+				}
 				if (!resDocs.containsKey(url))
 					resDocs.put(url, new DBResponseDocument(url));
 				DBResponseDocument doc = resDocs.get(url);
@@ -180,7 +194,7 @@ public class DBHandler {
 		// queryDoc.scoringMethod = scoringMethod;
 
 		for (String t : searchTerms) {
-			queryDoc.add_term(t, 1, 1, 1);
+			queryDoc.add_term(Utils.stemTerm(t), 1, 1, 1);
 		}
 
 		ArrayList<DBResponseDocument> sortedSet = new ArrayList<DBResponseDocument>();
@@ -216,12 +230,12 @@ public class DBHandler {
 
 	public SearchResultResponse getStats(String query, SearchResultResponse a_response) throws SQLException {
 
-		List<String> terms = Utils.getTermsWithoutQuotes(query);
-		terms.addAll(Utils.getTermsInQuotes(query));
+		List<String> terms = QueryParser.getTermsWithoutQuotes_2(query);
+		terms.addAll(QueryParser.getTermsInQuotes(query));
 		String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
 
 		Connection con = getConnection();
-		PreparedStatement sql = con.prepareStatement("SELECT * from get_term_frequencies(?)");
+		PreparedStatement sql = con.prepareStatement("SELECT * from get_doc_frequencies(?)");
 		sql.setArray(1, con.createArrayOf("text", termsArr));
 		sql.execute();
 		ResultSet results = sql.getResultSet();
@@ -242,7 +256,7 @@ public class DBHandler {
 
 	public int getCollectionSize() throws SQLException {
 		Connection con = getConnection();
-		PreparedStatement sql = con.prepareStatement("SELECT COUNT(docid) from documents");
+		PreparedStatement sql = con.prepareStatement("SELECT total_docs from doc_stats_table");
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		results.next();

@@ -88,8 +88,7 @@
 							<img class="smallImg card-img-top" src="${result.url}"
 								style="height: auto">
 							<div class="card-body">
-								<h5 class="card-title">${result.rank}</h5>
-								<p class="card-text">${result.score}</p>
+								<p>Score: ${result.score}</p>
 								<a href="${result.url2}">View Website</a>
 							</div>
 						</div>

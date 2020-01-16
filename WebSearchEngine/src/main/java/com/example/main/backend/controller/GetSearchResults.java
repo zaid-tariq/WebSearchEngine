@@ -38,7 +38,7 @@ public class GetSearchResults {
 			@RequestParam(value = "limit", defaultValue = "20") int limit,
 			@RequestParam(value = "lang") String languages) {
 		model.addAttribute("results",
-				api.searchAPIdisjunctive(query, limit, languages.split(" "), 3, SearchAPI.IMAGE_MODE).getResultList());
+				api.searchAPIdisjunctive(query, limit, languages.split(" "), 4, SearchAPI.IMAGE_MODE).getResultList());
 		return "images-results";
 	}
 }

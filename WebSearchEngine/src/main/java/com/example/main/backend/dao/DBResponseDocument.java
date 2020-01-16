@@ -72,13 +72,16 @@ public class DBResponseDocument {
 		if (this.scoringMethod == 3) {
 			this.cosSim = this.calculateCombinedScore();
 		}
+		
 	}
 
-	private float getScore(Scores score) {
+	private double getScore(Scores score) {
 		if (this.scoringMethod == 1) {
 			return score.tfidf_score;
-		} else {
+		} else if(this.scoringMethod == 2) {
 			return score.okapi_score;
+		} else {
+			return score.exponential_score;
 		}
 	}
 

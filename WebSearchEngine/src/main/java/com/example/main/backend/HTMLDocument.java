@@ -4,8 +4,11 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 
+import org.apache.commons.collections4.keyvalue.MultiKey;
+import org.apache.commons.collections4.map.MultiKeyMap;
+
 public class HTMLDocument {
-	
+
 	public static class Language {
 		public static final String GERMAN = "german";
 		public static final String ENGLISH = "english";
@@ -16,7 +19,8 @@ public class HTMLDocument {
 	private HashMap<String, Integer> termFrequencies = new HashMap<>();
 	private String language = null;
 	private String content = null;
-	private LinkedHashSet<URL> images = new LinkedHashSet<URL>();
+	private HashMap<Integer, URL> images = new HashMap<Integer, URL>();
+	private MultiKeyMap<String, Integer> termDistances = new MultiKeyMap<String, Integer>();
 
 	public HTMLDocument(URL url) {
 		this.url = url;
@@ -61,12 +65,20 @@ public class HTMLDocument {
 	public String getContent() {
 		return this.content;
 	}
-	
-	public void addImage(URL url) {
-		this.images.add(url);
+
+	public void addImage(URL url, int position) {
+		this.images.put(position,url);
 	}
-	
-	public LinkedHashSet<URL> getImages(){
+
+	public HashMap<Integer,URL> getImages() {
 		return this.images;
+	}
+
+	public void addTermDistance(String url, String term, int distance) {
+		termDistances.putIfAbsent(new MultiKey<String>(url, term), distance);
+	}
+
+	public MultiKeyMap<String, Integer> getTermDistances() {
+		return this.termDistances;
 	}
 }

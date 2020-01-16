@@ -17,10 +17,12 @@ public class DatabaseCreator {
 		try {
 			connection = db.getConnection();
 
+			
 			// CREATE TABLE IF NOT EXISTS s by DDL statements
 			createExtensionLevenshtein(connection);
 			createDocumentsTable(connection);
 			createFeatureTable(connection);
+			createImageFeatureTable(connection);
 			createViewsOnFeaturesTable(connection);
 			createLinksTable(connection);
 			createUpdateScoresunction(connection);
@@ -133,6 +135,13 @@ public class DatabaseCreator {
 	private void createFeatureTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
 				"CREATE TABLE IF NOT EXISTS features (docid INT REFERENCES documents(docid), term TEXT, term_frequency INT, score_tfidf real, score_okapi real, score_combined real, idf_tfidf real, idf_okapi real, df int )");
+		statement.execute();
+		statement.close();
+	}
+	
+	private void createImageFeatureTable(Connection con) throws SQLException {
+		PreparedStatement statement = con.prepareStatement(
+				"CREATE TABLE IF NOT EXISTS imagefeatures(imageurl TEXT NOT NULL, docid INT REFERENCES documents(docid), term TEXT, ndist INT, score_exponential REAL)");
 		statement.execute();
 		statement.close();
 	}

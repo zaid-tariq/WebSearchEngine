@@ -20,6 +20,7 @@ import java.util.TreeMap;
 
 import javax.sql.DataSource;
 
+import org.apache.commons.collections4.keyvalue.MultiKey;
 import org.la4j.Vector;
 import org.la4j.matrix.SparseMatrix;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -465,6 +466,40 @@ public class DBHandler {
 		stmt.close();
 	}
 
+	public void insertImageDataToDatabase(HTMLDocument doc, Connection con) throws SQLException {
+		PreparedStatement stmtInsertImageFeature = con
+				.prepareStatement("INSERT INTO imagefeatures (imageurl, docid, term, ndist) VALUES (?,?,?,?)");
+		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
+		stmtgetDocId.setString(1, doc.getUrl().toString());
+		stmtgetDocId.execute();
+		ResultSet rsDocId = stmtgetDocId.getResultSet();
+		if (rsDocId.next()) {
+			int docId = rsDocId.getInt(1);
+
+			// Insert image features now
+			for (Entry<MultiKey<? extends String>, Integer> e : doc.getTermDistances().entrySet()) {
+				@SuppressWarnings("unchecked")
+				MultiKey<String> mK = (MultiKey<String>) e.getKey();
+
+				int tf = doc.getTermFrequencies().get((String) mK.getKey(0));
+				double score = (1 / (1 - Math.exp(-tf * e.getValue())));
+
+				stmtInsertImageFeature.setString(1, (String) mK.getKey(0));
+				stmtInsertImageFeature.setInt(2, docId);
+				stmtInsertImageFeature.setString(3, (String) mK.getKey(1));
+				stmtInsertImageFeature.setInt(4, e.getValue());
+				stmtInsertImageFeature.setDouble(5, score);
+				stmtInsertImageFeature.addBatch();
+			}
+
+			stmtInsertImageFeature.executeBatch();
+		}
+		rsDocId.close();
+		stmtgetDocId.close();
+
+		stmtInsertImageFeature.close();
+	}
+
 	public boolean getCrawlerFlag() throws SQLException {
 		Connection con = this.getConnection();
 		PreparedStatement stmtCrawlerFlag = con.prepareStatement("SELECT run FROM crawlerState");
@@ -661,6 +696,13 @@ public class DBHandler {
 		return content;
 	}
 
+	/**
+	 * Returns the language of a document identified by the url
+	 * 
+	 * @param url
+	 * @return
+	 * @throws SQLException
+	 */
 	public String getLanguageByURL(String url) throws SQLException {
 		Connection con = getConnection();
 
@@ -798,4 +840,5 @@ public class DBHandler {
 
 		return new Snippet(markedString, -1, notExists);
 	}
+
 }

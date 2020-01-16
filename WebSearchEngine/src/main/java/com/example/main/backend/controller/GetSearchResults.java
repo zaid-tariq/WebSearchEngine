@@ -26,4 +26,12 @@ public class GetSearchResults {
 		model.addAttribute("didYouMean", api.getDidYouMeanQuery(query));
 		return "results";
 	}
+	
+	@RequestMapping("is-project/images.html")
+	public String images(Model model, @RequestParam(value = "query") String query,
+			@RequestParam(value = "limit", defaultValue = "20") int limit,
+			@RequestParam(value = "lang") String languages) {
+		model.addAttribute("results",api.search)
+		return "images";
+	}
 }

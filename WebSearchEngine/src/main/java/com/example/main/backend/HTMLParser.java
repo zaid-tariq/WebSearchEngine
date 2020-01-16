@@ -134,83 +134,34 @@ public class HTMLParser {
 				e.printStackTrace();
 			}
 		}
-		
-		System.out.println("STEP 1");
+
 		Matcher mImages = Pattern.compile("<img[^>]*src=\"(.*?)\"[^>]*>").matcher(content);
 		while (mImages.find()) {
 			try {
 				List<String> urls = UrlExtractor.extractUrls(mImages.group(1));
-				for (int x=0;x<urls.size();x++) {
-					doc.addImage(new URL(urls.get(x)),x);
+				for (int x = 0; x < urls.size(); x++) {
+					doc.addImage(new URL(urls.get(x)), x);
 				}
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
 			}
 		}
 
-		System.out.println("STEP 2");
 		String specialChars = "(<br>|\\?|\\!|\\>|\\/|&nbsp;|&bull;|&amp;|&#39;|&hellip;|\\.|\\,|\\:|\\;|\\[|\\]|\\{|\\}|\\||\\+|\\-|\\*|\\)|\\(|\\=|\\\"|\\|'|'|&|…|#|_)";
 		// That pattern matches every tag except the image tag:
 		// (?!<img[^>]*src=\"(.*?)\"[^>]*>)(<[^>]*>)
-		System.out.println("STEP 2.1");
 		String imageText = content.replaceAll("(?!<img[^>]*src=\"(.*?)\"[^>]*>)(<[^>]*>)", " ");
-		System.out.println("STEP 2.2");
-		System.out.println(imageText);
-		//TODO: find error here
-		imageText = imageText.replaceAll("<img.*>", "$img$");
-		System.out.println("STEP 2.3");
+		imageText = imageText.replaceAll("<img.*>", "\\$img\\$");
+		imageText = StringEscapeUtils.builder(StringEscapeUtils.UNESCAPE_HTML4).escape(imageText).toString();
 		imageText = imageText.replaceAll(specialChars, " ");
-
-		/**
-		 * Extract minimum distance to an image for a term in a range of 15 words around the image
-		 */
-		System.out.println("STEP 3");
+		// remove stopwords
 		String[] imageContentTerms = imageText.split("\\s+");
-		int imgNumber =0;
 		for (int x = 0; x < imageContentTerms.length; x++) {
-			if (imageContentTerms[x].equals("$img$")) {
-				int tagPos = x;
-				int leftOffset = 0;
-				int rightOffset = 0;
-				for (int dist = 1; dist <= 15; dist++) {
-					// Jump over multiple img tags in a row
-					int leftWordPos = tagPos - (dist + leftOffset);
-					int rightWordPos = tagPos + dist + rightOffset;
-
-					if (leftWordPos >= 0) {
-						while (imageContentTerms[leftWordPos].equals("$img$")) {
-							leftOffset++;
-						}
-						leftWordPos = tagPos - (dist + leftOffset);
-						if (leftWordPos >= 0) {
-							String word = imageContentTerms[leftWordPos];
-							if (doc.getLanguage().equals(Language.ENGLISH)) {
-								word = Utils.toStemmed(word);
-							}
-							doc.addTermDistance(doc.getImages().get(imgNumber).toString(),word, dist);
-						}
-					}
-
-					if (rightWordPos >= imageContentTerms.length) {
-						while (imageContentTerms[rightWordPos].equals("$img$")) {
-							rightOffset++;
-						}
-						rightWordPos = tagPos + dist + rightOffset;
-
-						if (rightWordPos < imageContentTerms.length) {
-							String word = imageContentTerms[rightWordPos];
-							if (doc.getLanguage().equals(Language.ENGLISH)) {
-								word = Utils.toStemmed(word);
-							}
-							doc.addTermDistance(doc.getImages().get(imgNumber).toString(),word, dist);
-						}
-					}
-				}
-				imgNumber++;
+			if (stopwords.contains(imageContentTerms[x].toLowerCase())) {
+				imageContentTerms[x] = "";
 			}
 		}
-		System.out.println("STEP 4");
-		
+
 		// 3. remove all tags
 		LinkedList<String> extractedContent = new LinkedList<String>();
 
@@ -231,6 +182,55 @@ public class HTMLParser {
 					tuningParameterWordsToConsider < extractedContent.size() ? tuningParameterWordsToConsider - 1
 							: extractedContent.size() - 1);
 			doc.setLanguage(detector.detect(wordsToConsider));
+		}
+
+		/**
+		 * Extract minimum distance to an image for a term in a range of 15 words around
+		 * the image
+		 */
+		int imgNumber = 0;
+		for (int x = 0; x < imageContentTerms.length; x++) {
+			if (imageContentTerms[x].equals("$img$")) {
+				int tagPos = x;
+				int leftOffset = 0;
+				int rightOffset = 0;
+				for (int dist = 1; dist <= 15; dist++) {
+					// Jump over multiple img tags in a row
+					int leftWordPos = tagPos - (dist + leftOffset);
+					int rightWordPos = tagPos + dist + rightOffset;
+
+					if (leftWordPos >= 0) {
+						while (imageContentTerms[leftWordPos].equals("$img$")
+								|| imageContentTerms[leftWordPos].equals("")) {
+							leftOffset++;
+							leftWordPos = tagPos - (dist + leftOffset);
+						}
+						if (leftWordPos >= 0) {
+							String word = imageContentTerms[leftWordPos];
+							if (doc.getLanguage().equals(Language.ENGLISH)) {
+								word = Utils.toStemmed(word);
+							}
+							doc.addTermDistance(doc.getImages().get(imgNumber).toString(), word, dist);
+						}
+					}
+
+					if (rightWordPos < imageContentTerms.length) {
+						while (imageContentTerms[rightWordPos].equals("$img$")
+								|| imageContentTerms[rightWordPos].equals("")) {
+							rightOffset++;
+							rightWordPos = tagPos + dist + rightOffset;
+						}
+						if (rightWordPos < imageContentTerms.length) {
+							String word = imageContentTerms[rightWordPos];
+							if (doc.getLanguage().equals(Language.ENGLISH)) {
+								word = Utils.toStemmed(word);
+							}
+							doc.addTermDistance(doc.getImages().get(imgNumber).toString(), word, dist);
+						}
+					}
+				}
+				imgNumber++;
+			}
 		}
 
 		// 4. remove all stopwords, stemming and term frequency calculation at the same

@@ -29,11 +29,11 @@ public class CrawlerRunnable implements Runnable {
 		Connection con = null;
 		try {
 			System.out.println("CRAWLING STARTED");
-			
+
 			HTMLDocument doc = Indexer.index(urlToCrawl);
-			
+
 			System.out.println("DOC CRAWLED");
-			
+
 			con = db.getConnection();
 			if (doc != null) {
 				con.setAutoCommit(false);
@@ -42,7 +42,6 @@ public class CrawlerRunnable implements Runnable {
 				db.insertURLSToQueue(doc.getLinks(), depth, con);
 				db.insertURLToVisited(doc.getUrl(), con);
 				db.insertImageDataToDatabase(doc, con);
-
 				con.commit();
 			}
 		} catch (IOException | URISyntaxException | SQLException e) {

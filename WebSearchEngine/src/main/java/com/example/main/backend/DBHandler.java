@@ -468,30 +468,28 @@ public class DBHandler {
 
 	public void insertImageDataToDatabase(HTMLDocument doc, Connection con) throws SQLException {
 		PreparedStatement stmtInsertImageFeature = con
-				.prepareStatement("INSERT INTO imagefeatures (imageurl, docid, term, ndist) VALUES (?,?,?,?)");
+				.prepareStatement("INSERT INTO imagefeatures (imageurl, docid, term, ndist,score_exponential) VALUES (?,?,?,?,?)");
 		PreparedStatement stmtgetDocId = con.prepareStatement("SELECT docid FROM documents WHERE url LIKE ?");
 		stmtgetDocId.setString(1, doc.getUrl().toString());
 		stmtgetDocId.execute();
 		ResultSet rsDocId = stmtgetDocId.getResultSet();
 		if (rsDocId.next()) {
+			System.out.println("FOUND DOC");
 			int docId = rsDocId.getInt(1);
 
 			// Insert image features now
 			for (Entry<MultiKey<? extends String>, Integer> e : doc.getTermDistances().entrySet()) {
 				@SuppressWarnings("unchecked")
 				MultiKey<String> mK = (MultiKey<String>) e.getKey();
-
-				int tf = doc.getTermFrequencies().get((String) mK.getKey(0));
+				int tf = doc.getTermFrequencies().get((String) mK.getKey(1).toLowerCase());
 				double score = (1 / (1 - Math.exp(-tf * e.getValue())));
-
-				stmtInsertImageFeature.setString(1, (String) mK.getKey(0));
+				stmtInsertImageFeature.setString(1, (String) mK.getKey(0).toLowerCase());
 				stmtInsertImageFeature.setInt(2, docId);
-				stmtInsertImageFeature.setString(3, (String) mK.getKey(1));
+				stmtInsertImageFeature.setString(3, (String) mK.getKey(1).toLowerCase());
 				stmtInsertImageFeature.setInt(4, e.getValue());
 				stmtInsertImageFeature.setDouble(5, score);
 				stmtInsertImageFeature.addBatch();
 			}
-
 			stmtInsertImageFeature.executeBatch();
 		}
 		rsDocId.close();

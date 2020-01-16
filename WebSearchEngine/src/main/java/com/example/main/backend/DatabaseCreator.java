@@ -141,7 +141,7 @@ public class DatabaseCreator {
 	
 	private void createImageFeatureTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
-				"CREATE TABLE IF NOT EXISTS imagefeatures(imageurl TEXT NOT NULL, docid INT REFERENCES documents(docid), term TEXT, ndist INT, score_exponential REAL)");
+				"CREATE TABLE IF NOT EXISTS imagefeatures(imageurl TEXT NOT NULL, docid INT REFERENCES documents(docid), term TEXT, ndist INT, score_exponential DOUBLE PRECISION)");
 		statement.execute();
 		statement.close();
 	}

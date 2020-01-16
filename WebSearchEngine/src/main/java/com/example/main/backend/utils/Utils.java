@@ -41,10 +41,11 @@ public class Utils {
 
 	public static List<String> getTermsWithoutQuotes(String query) {
 		List<String> searchTerms = new ArrayList<String>();
+		
 		for (String subQuery : Utils.getTermsInQuotes("\"" + query + "\"")) {
 			for (String term : subQuery.split(" ")) {
 				term = term.trim();
-				if (term.length() > 0) {
+				if (term.length() > 0) {					
 					searchTerms.add(term);
 				}
 			}

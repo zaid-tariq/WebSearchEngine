@@ -37,14 +37,6 @@ public class SearchAPIController {
 		return ResponseEntity.ok().body(res);
 	}
 	
-	
-	@GetMapping("/updateScores")
-	@ResponseBody
-	public ResponseEntity<String> updateScores() {
-		searchApi.updateScores();
-		return ResponseEntity.ok().body("Scores updated!");
-	}
-	
 	@RequestMapping("*")
 	@ResponseBody
 	public String fallbackMethod() {

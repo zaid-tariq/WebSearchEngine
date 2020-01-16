@@ -120,22 +120,8 @@ public class SearchAPI {
 		res.filterResultsWithSite(q.site);
 		return res;
 	}
-
-	public void updateScores() {
-		try {
-			db.computePageRank(0.1, 0.001);
-			System.out.println("Computed PageRank");
-			db.updateScores();
-			System.out.println("Update Scores");
-		} catch (SQLException ex) {
-			ex.printStackTrace();
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-	}
-
-	public String getDidYouMeanQuery(String query) {
-
+	
+	public String getDidYouMeanQuery(String query)  {
 		String altQuery = null;
 		Connection con = null;
 		try {
@@ -144,10 +130,10 @@ public class SearchAPI {
 			String[] termsArr = (String[]) terms.toArray(new String[terms.size()]);
 			con = db.getConnection();
 			SpellChecker spellChecker = new SpellChecker();
-			Map<String, List<Map.Entry<String, Integer>>> relTerms = spellChecker
-					.findRelatedTermsForLessFrequentTerms(termsArr, con);
-
-			altQuery = spellChecker.findBestAlternateQuery(terms, relTerms, con);
+			Map<String, List<Map.Entry<String, Integer>>> relTerms = spellChecker.findRelatedTermsForLessFrequentTerms(termsArr, con);
+			
+			if(relTerms.size() > 0 )
+				altQuery = spellChecker.findBestAlternateQuery(terms, relTerms, con);
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {

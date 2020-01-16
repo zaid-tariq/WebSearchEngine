@@ -25,18 +25,23 @@ public class DatabaseCreator {
 			createImageFeatureTable(connection);
 			createViewsOnFeaturesTable(connection);
 			createLinksTable(connection);
+			createDocumnetStatsTable(connection);
 			createUpdateScoresunction(connection);
 			createFunctionConjunctive_search(connection);
 			createFunctionDisjunctive_search(connection);
 			createFunctionDisjunctiveImage_search(connection);
-			createStatsFunction(connection);
 			createIndices(connection);
 			create_function_get_related_terms_to_less_frequent_terms(connection);
 			create_alternate_query_scorer_function(connection);
-
+			createCollectionVocabularyTable(connection);
 			createCrawlerStateTable(connection);
 			createCrawlerQueueTable(connection);
 			createCrawlerVisitedPagesTable(connection);
+			createUpdateDocStatsFunction(connection);
+			createUpdateDocFrequenceFunction(connection);
+			createUpdateIdfScoresunction(connection);
+			createUpdateScoresunction(connection);
+			createGetDocFrequenciesFunction(connection);
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -95,39 +100,72 @@ public class DatabaseCreator {
 
 	private void createFunctionDisjunctive_search(Connection connection) throws SQLException {
 		String query = 
-				"CREATE OR REPLACE FUNCTION get_docs_for_disjunctive_search(search_terms text[], required_terms text[], lang TEXT[])"
-				+ "    	RETURNS TABLE(docurl text, term text, tfidf real, okapi real, combined real)" 
-				+ "    	LANGUAGE 'plpgsql'"
-				+ "		AS $$" +
-						" BEGIN" + 
-						"	CREATE TEMP TABLE search_terms_table(term text);		" + 
-						"	INSERT INTO search_terms_table SELECT unnest(search_terms); " + 
-						"	CREATE TEMP TABLE required_terms_table(term text);		" + 
-						"	INSERT INTO required_terms_table SELECT unnest(required_terms); " + 
-						"	RETURN QUERY" + 
-						"			WITH" + 
-						" 			filtered_docs_keywords AS(" + 
-						" 							SELECT f1.docid				" + 
-						" 							FROM features f1				" + 
-						" 							GROUP BY f1.docid 				" + 
-						" 							HAVING " + 
-						" 								NOT EXISTS(					" + 
-						"	 								SELECT * FROM required_terms_table 					" + 
-						"	 								EXCEPT SELECT unnest(array_agg(f1.term))				" + 
-						"	 								)" + 
-						"	 							AND EXISTS(					" + 
-						"		 							(SELECT * FROM search_terms_table UNION SELECT * FROM required_terms_table) 						" + 
-						"		 							INTERSECT " + 
-						"		 							SELECT unnest(array_agg(f1.term))" + 
-						"		 						)			" + 
-						" 							)					" + 
-						" 						SELECT d.url, f.term, f.score_tfidf, f.score_okapi, f.score_combined" + 
-						" 		 				from features f, filtered_docs_keywords fd, documents d				" + 
-						" 		 				WHERE 	f.docid = fd.docid 						" + 
-						" 		 				AND f.docid = d.docid"
-						+ "						AND d.language = ANY(lang)			" + 
-						" 		 				ORDER BY d.docid;	" + 
-						" END; $$;";
+				"CREATE OR REPLACE FUNCTION get_docs_for_disjunctive_search(search_terms text[], required_terms text[], lang TEXT[]) " + 
+				" RETURNS TABLE(docurl text, term text, tfidf real, okapi real) " + 
+				" LANGUAGE 'plpgsql' " + 
+				"AS $$ " + 
+				"BEGIN    " + 
+				"" + 
+				"	CREATE TEMP TABLE required_terms_table AS" + 
+				"	  SELECT unnest(required_terms) term;" + 
+				"	  " + 
+				"	 CREATE TEMP TABLE search_terms_table AS" + 
+				"	  SELECT unnest(search_terms) term;" + 
+				"" + 
+				"	CREATE TEMP TABLE expanded_terms AS" + 
+				"		SELECT t2.elem term, elem2 syn" + 
+				"		FROM" + 
+				"		(" + 
+				"			select *" + 
+				"			from search_terms_table st," + 
+				"			unnest(string_to_array(split_part(st.term, '=', 1), ':')) elem" + 
+				"		  )  t2 " + 
+				"		  LEFT JOIN (" + 
+				"			select *" + 
+				"			from search_terms_table st," + 
+				"			unnest(string_to_array(split_part(st.term, '=', 1), ':')) elem," + 
+				"			unnest(string_to_array(split_part(st.term, '=', 2), ':')) elem2" + 
+				"		  )  t3" + 
+				"		  ON" + 
+				"		  t2.elem = t3.elem;" + 
+				"  CREATE TEMP TABLE combined_expanded_terms (term text);" + 
+				"  INSERT INTO combined_expanded_terms" + 
+				"    SELECT * " + 
+				"    FROM  (" + 
+				"        SELECT syn FROM expanded_terms e1" + 
+				"        UNION SELECT e1.term FROM expanded_terms e1" + 
+				"        UNION SELECT e2.term FROM required_terms_table e2" + 
+				"	) s;" + 
+				"    " + 
+				"" + 
+				"  RETURN QUERY" + 
+				" 	SELECT d.url, f3.term, f3.score_tfidf, f3.score_okapi  " + 
+				"	FROM(" + 
+				"		SELECT f.docid" + 
+				"		FROM features f  " + 
+				"		GROUP BY f.docid   " + 
+				"		HAVING   " + 
+				"		   NOT EXISTS(           " + 
+				"		   SELECT * FROM required_terms_table            " + 
+				"		   EXCEPT SELECT unnest(array_agg(f.term) )          " + 
+				"		   )  " + 
+				"		 AND EXISTS(           " + 
+				"			SELECT * FROM combined_expanded_terms             " + 
+				"			INTERSECT   " + 
+				"			SELECT unnest(array_agg(f.term) )  " + 
+				"		 )" + 
+				"		) f2 JOIN documents d ON f2.docid = d.docid  " + 
+				"		JOIN features f3 ON f2.docid=f3.docid" + 
+				"		JOIN combined_expanded_terms cet ON f3.term=cet.term		" + 
+				"		WHERE d.language = ANY(lang);  " + 
+				"" + 
+				"  DROP TABLE expanded_terms;" + 
+				"  DROP TABLE combined_expanded_terms;" + 
+				"  DROP TABLE required_terms_table;" + 
+				"  DROP TABLE search_terms_table;" + 
+				"" + 
+				"  RETURN; " + 
+				"END; $$;";
 				Statement statement = connection.createStatement();
 				statement.execute(query);
 				statement.close();
@@ -222,6 +260,22 @@ public class DatabaseCreator {
 		statement.close();
 	}
 	
+	private void createCollectionVocabularyTable(Connection con) throws SQLException {
+		//not using this table right now, but can use it for optimizations later
+		PreparedStatement statement = con.prepareStatement(
+				"CREATE TABLE IF NOT EXISTS collection_vocab_table (term text NOT NULL, frequency INT NOT NULL, doc_freq INT NOT NULL)");
+		statement.execute();
+		statement.close();
+	}
+	
+	private void createDocumnetStatsTable(Connection con) throws SQLException {
+		
+		PreparedStatement statement = con.prepareStatement(
+				"CREATE TABLE IF NOT EXISTS doc_stats_table (total_docs INT, avg_num_of_terms INT)");
+		statement.execute();
+		statement.close();
+	}
+	
 	private void createIndices(Connection con) throws SQLException {
 	
 		String query = 
@@ -231,72 +285,10 @@ public class DatabaseCreator {
 		statement.execute(query);
 		statement.close();
 	}
-/*
-	private void createProcedureToTfIdfUpdate(Connection con) throws SQLException {
-		String query = "CREATE OR REPLACE PROCEDURE update_tf_idf_scores() " + " LANGUAGE 'sql' "
-				+ " AS $procedure$	CREATE TABLE features_temp AS" + "		WITH " + "			doc_freq AS ("
-				+ "				SELECT term, COUNT(DISTINCT docid) as doc_count_of_term"
-				+ "				FROM features" + "				GROUP BY term" + "			),"
-				+ "			total_docs AS (" + "				SELECT COUNT( DISTINCT docid) as num"
-				+ "				FROM features" + "			)," + "			idf_scores AS ("
-				+ "				SELECT f.term, LOG( 1.0 * total_docs.num / doc_freq.doc_count_of_term) as idf_score"
-				+ "				FROM features f, doc_freq, total_docs			"
-				+ "				WHERE f.term = doc_freq.term" + "			)"
-				+ "		SELECt f.docid, f.term, f.term_frequency, (i.idf_score * (1.0 + LOG(f.term_frequency) )) AS tf_idf"
-				+ "		FROM idf_scores i, features f" + "		WHERE i.term = f.term;" + "		"
-				+ "	DROP TABLE features;" + "	ALTER TABLE features_temp" + "		RENAME TO features;" + ""
-				+ "	$procedure$";
-		Statement statement = con.createStatement();
-		statement.execute(query);
-		statement.close();
-	}
 
-	private void createFunctionConjunctive_search(Connection con) throws SQLException {
-		String query = "		CREATE OR REPLACE FUNCTION conjunctive_search(" + "				IN search_terms text[],"
-				+ "				IN top_k integer" + "			)"
-				+ "    	RETURNS TABLE(doc_url text, tf_idf_score real)" + "    	LANGUAGE 'plpgsql'"
-				+ "		AS $BODY$ BEGIN" + "		CREATE TEMP TABLE search_terms_table(term text);		"
-				+ "		INSERT INTO search_terms_table SELECT unnest(search_terms); " + "		RETURN QUERY"
-				+ "				WITH " + "					filtered_docs AS(" + "						SELECT f1.docid"
-				+ "						FROM features f1" + "						GROUP BY f1.docid"
-				+ "						HAVING NOT EXISTS(" + "						SELECt * FROM search_terms_table "
-				+ "						EXCEPT SELECT unnest(array_agg(f1.term))" + "				)"
-				+ "					)" + "				SELECT d.url, CAST( SUM(tf_idf) AS FLOAT(3)) as tf_idf"
-				+ "				from features f, filtered_docs fd, documents d"
-				+ "				WHERE 	f.docid = fd.docid " + "						AND f.docid = d.docid"
-				+ "				GROUP BY d.url" + "				ORDER BY tf_idf" + "				LIMIT top_k;"
-				+ "END; $BODY$;";
-		Statement statement = con.createStatement();
-		statement.execute(query);
-		statement.close();
-	}
 
-	private void createFunctionDisjunctive_search(Connection con) throws SQLException {
-		String query = "	CREATE OR REPLACE FUNCTION disjunctive_search(" + "    	search_terms text[], "
-				+ "		required_terms text[]," + "		top_k integer" +
-				// " site text" +
-				"		)" + "	RETURNS TABLE(doc_url text, tf_idf_score real)" + "	LANGUAGE plpgsql" + "	AS $$" +
-
-				"BEGIN			" + "CREATE TEMP TABLE search_terms_table(term text);		"
-				+ "INSERT INTO search_terms_table SELECT unnest(search_terms); "
-				+ "CREATE TEMP TABLE required_terms_table(term text);		"
-				+ "INSERT INTO required_terms_table SELECT unnest(required_terms); " + "RETURN QUERY" + "		WITH "
-				+ "			filtered_docs_keywords AS(						" + "				SELECT f1.docid"
-				+ "				FROM features f1" + "				GROUP BY f1.docid "
-				+ "				HAVING NOT EXISTS(" + "					SELECt * FROM required_terms_table "
-				+ "					EXCEPT SELECT unnest(array_agg(term))" + "				)" + "			)"
-				+ "			" + "		SELECT d.url, CAST(SUM(f.tf_idf) AS FLOAT(2)) as tf_idf				"
-				+ "		from features f, filtered_docs_keywords fd, search_terms_table st, documents d		"
-				+ "		WHERE	f.docid=fd.docid						" + "				AND f.term = st.term "
-				+ "				AND f.docid = d.docid" + "		GROUP BY d.url				"
-				+ "		ORDER BY tf_idf				" + "		LIMIT top_k;" + "	END;  $$;";
-		Statement statement = con.createStatement();
-		statement.execute(query);
-		statement.close();
-	}*/
-
-	private void createStatsFunction(Connection con) throws SQLException {
-		String query = "CREATE OR REPLACE FUNCTION get_term_frequencies(" + "    search_terms text[]" + ")"
+	private void createGetDocFrequenciesFunction(Connection con) throws SQLException {
+		String query = "CREATE OR REPLACE FUNCTION get_doc_frequencies(" + "    search_terms text[]" + ")"
 				+ "RETURNS TABLE(term text, df bigint) " + "LANGUAGE 'plpgsql' " + "AS $$ " + "BEGIN "
 				+ "DROP TABLE IF EXISTS search_terms_table; "
 				+ "CREATE TEMP TABLE search_terms_table(term text);		"
@@ -311,79 +303,88 @@ public class DatabaseCreator {
 	
 	private void createUpdateScoresunction(Connection con) throws SQLException {
 		String query = 
-		"CREATE OR REPLACE PROCEDURE update_scores(k real, b real) " + 
-		"LANGUAGE 'plpgsql' " + 
-		"AS $$ " + 
-		"BEGIN " + 
-		"WITH " + 
-		"  doc_freq AS(" + 
-		"      SELECT term," + 
-		"      COUNT(DISTINCT docid) AS doc_count_of_term" + 
-		"      FROM features" + 
-		"      GROUP BY term" + 
-		"  )," + 
+		"" + 
+		"CREATE OR REPLACE PROCEDURE update_scores(k real, b real)   " + 
+		"    LANGUAGE 'plpgsql'   " + 
+		"    AS $$   " + 
+		"    BEGIN   " + 
 		"    " + 
-		"  docs_stats AS(" + 
-		"      SELECT COUNT(docid) AS total_docs, AVG(num_of_terms) as avg_num_of_terms" + 
-		"      FROM documents" + 
-		"  )," + 
-		"  idf_scores_tfidf AS(" + 
-		"      SELECT f.term," + 
-		"          LOG(1.0 * docs_stats.total_docs / doc_freq.doc_count_of_term) AS idf_score" + 
-		"      FROM features f," + 
-		"          doc_freq," + 
-		"          docs_stats" + 
-		"      WHERE f.term = doc_freq.term " + 
-		"  )," + 
-		"  idf_scores_okapi AS(" + 
-		"      SELECT f.term," + 
-		"              LOG((docs_stats.total_docs - doc_freq.doc_count_of_term + 0.5)/(doc_freq.doc_count_of_term + 0.5)) AS idf_score" + 
-		"      FROM features f," + 
-		"            doc_freq," + 
-		"            docs_stats" + 
-		"      WHERE f.term = doc_freq.term " + 
-		"  )," + 
-		"  term_scores AS (" + 
-		"      SELECT" + 
-		"             f.term," + 
-		"             d.docid," + 
-		"             (  " + 
-		"              idf_scores_okapi.idf_score * (" + 
-		"                              				 f.term_frequency * ($1 + 1) / (" + 
-		"                                                                       			f.term_frequency + ( $1 * (" + 
-		"                                                                                                      			1-$2+($2 * d.num_of_terms/docs_stats.avg_num_of_terms)" + 
-		"                                                                                                          	)" + 
-		"                                                                                          			) " + 
-		"                                                                      			 )" + 
-		"                              				)" + 
-		"              ) AS score_okapi," + 
-		"              (" + 
-		"				  idf_scores_tfidf.idf_score * (1.0 + LOG(f.term_frequency))" + 
-		"			  ) AS score_tf_idf" + 
-		"      FROM" + 
-		"          features f," + 
-		"          documents d," + 
-		"          idf_scores_tfidf," + 
-		"          idf_scores_okapi," + 
-		"          docs_stats" + 
-		"      WHERE f.term = idf_scores_tfidf.term" + 
-		"	  		AND f.term = idf_scores_okapi.term" + 
-		"            AND f.docid = d.docid" + 
-		"    )" + 
-		"UPDATE features f " + 
-		"SET score_tfidf = term_scores.score_tf_idf, " + 
-		"    score_okapi = term_scores.score_okapi, " +
-		"	 idf_tfidf = idf_scores_tfidf.idf_score, "+
-		"	 idf_okapi = idf_scores_okapi.idf_score,"+
-		"	 df = doc_freq.doc_count_of_term " +
-		"FROM term_scores, idf_scores_okapi, idf_scores_tfidf, doc_freq " + 
-		"WHERE f.term = term_scores.term AND f.docid = term_scores.docid AND f.term=idf_scores_okapi.term AND f.term=idf_scores_tfidf.term AND f.term=doc_freq.term; " +
-		" "+
-		"END; $$;";
+		"    UPDATE features f   " + 
+		"    SET score_tfidf = f.idf_tfidf * (1.0 + LOG(f.term_frequency)) ,   " + 
+		"        score_okapi = f.idf_okapi * ( f.term_frequency * ($1 + 1) / ( f.term_frequency *($1 * (1-$2+($2 * d.num_of_terms/doc_stats_table.avg_num_of_terms)))))  " + 
+		"    FROM features f2, doc_stats_table, documents d" + 
+		"    WHERE f.term = f2.term " + 
+		"    AND f.docid = f2.docid " + 
+		"    AND f.docid=d.docid;" + 
+		"     " + 
+		"    END; $$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();
 	}
+	
+	private void createUpdateIdfScoresunction(Connection con) throws SQLException {
+		String query = 
+		"CREATE OR REPLACE PROCEDURE update_idf_scores_function()   " + 
+		"    LANGUAGE 'plpgsql'   " + 
+		"    AS $$   " + 
+		"    BEGIN   " + 
+		" " + 
+		"      UPDATE features f1" + 
+		"      SET idf_tfidf = LOG(1.0 * doc_stats_table.total_docs / f2.df), " + 
+		"          idf_okapi = LOG((doc_stats_table.total_docs - f2.df + 0.5)/(f2.df + 0.5)) " + 
+		"      FROM features f2,doc_stats_table" + 
+		"      WHERE f1.term = f2.term AND f1.docid = f2.docid;" + 
+		"" + 
+		"    END; $$;";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	
+	private void createUpdateDocFrequenceFunction(Connection con) throws SQLException {
+		String query = 
+		"CREATE OR REPLACE PROCEDURE update_df_table()   " + 
+		"    LANGUAGE 'plpgsql'   " + 
+		"    AS $$   " + 
+		"    BEGIN   " + 
+		"      UPDATE features" + 
+		"      SET df = df_tbl.doc_count_of_term" + 
+		"      FROM (" + 
+		"	  	  SELECT f2.term, COUNT(DISTINCT f2.docid) AS doc_count_of_term  " + 
+		"		  FROM features f2  " + 
+		"		  GROUP BY f2.term  " + 
+		"	  ) df_tbl" + 
+		"      WHERE features.term = df_tbl.term;" + 
+		"    END; $$;";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	
+	private void createUpdateDocStatsFunction(Connection con) throws SQLException {
+		String query = 
+		"CREATE OR REPLACE PROCEDURE update_doc_stats_table()   " + 
+		"    LANGUAGE 'plpgsql'   " + 
+		"    AS $$   " + 
+		"    BEGIN   " + 
+		"    WITH   " + 
+		"      docs_stats AS( " + 
+		"          SELECT COUNT(docid) num_docs, AVG(num_of_terms) avg_num_terms  " + 
+		"          FROM documents  " + 
+		"      )" + 
+		"      UPDATE doc_stats_table" + 
+		"      SET total_docs = ds.num_docs," + 
+		"          avg_num_of_terms = ds.avg_num_terms" + 
+		"      FROM docs_stats ds;" + 
+		"    END; $$;";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
 	
 	private void createViewsOnFeaturesTable(Connection con) throws SQLException {
 		

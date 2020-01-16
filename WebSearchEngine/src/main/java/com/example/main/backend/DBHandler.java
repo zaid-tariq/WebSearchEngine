@@ -35,6 +35,8 @@ import com.example.main.backend.pagerank.PageRank;
 import com.example.main.backend.utils.SnippetGenerator;
 import com.example.main.backend.utils.Utils;
 
+import net.sf.extjwnl.JWNLException;
+
 @Repository
 public class DBHandler {
 
@@ -51,11 +53,32 @@ public class DBHandler {
 		return dataSource.getConnection();
 	}
 
+	public void updateIdfScores() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL update_idf_scores_function()");
+		query.execute();
+		con.close();
+	}
+	
+	public void updateStats() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL update_doc_stats_table()");
+		query.execute();
+		con.close();
+	}
+	
+	public void updateDocFrequencies() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL update_df_table()");
+		query.execute();
+		con.close();
+	}
+	
 	public void updateScores() throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("CALL update_scores(?,?)");
 		query.setFloat(1, Float.parseFloat(bm25_k));
-		query.setFloat(2, Float.parseFloat(bm25_k));
+		query.setFloat(2, Float.parseFloat(bm25_b));
 		query.execute();
 		con.close();
 	}
@@ -84,28 +107,14 @@ public class DBHandler {
 	}
 
 	public SearchResultResponse searchDisjunctiveQuery(String query, int k_limit, String[] languages,
-			SearchResultResponse a_response, int scoringMethod, int searchMode) throws SQLException {
+			SearchResultResponse a_response, int scoringMethod, int searchMode) throws SQLException, JWNLException {
 
 		Connection con = getConnection();
-
 		query = query.toLowerCase();
 
-		List<String> searchTerms = new ArrayList<String>();
-		List<String> requiredTerms = new ArrayList<>();
-
-		// TODO: how to make it for german and english search together?
-		if (languages.length == 1 && languages[0].equalsIgnoreCase(HTMLDocument.Language.ENGLISH)) {
-			for (String t : Utils.getTermsWithoutQuotes(query)) {
-				searchTerms.add(Utils.toStemmed(t));
-			}
-			for (String t : Utils.getTermsInQuotes(query)) {
-				requiredTerms.add(Utils.toStemmed(t));
-			}
-		} else {
-			searchTerms = Utils.getTermsWithoutQuotes(query);
-			requiredTerms = Utils.getTermsInQuotes(query);
-		}
-
+		List<String> searchTerms = QueryExpansion.expandQuery(Utils.getTermsWithoutQuotes(query));
+		List<String> requiredTerms = Utils.getTermsInQuotes(query);
+	
 		String[] searchTermsArr = (String[]) searchTerms.toArray(new String[searchTerms.size()]);
 		String[] requiredTermsArr = (String[]) requiredTerms.toArray(new String[requiredTerms.size()]);
 

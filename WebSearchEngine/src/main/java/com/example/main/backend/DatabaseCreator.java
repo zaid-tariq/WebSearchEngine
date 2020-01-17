@@ -287,14 +287,18 @@ public class DatabaseCreator {
 	}
 
 	private void createGetDocFrequenciesFunction(Connection con) throws SQLException {
-		String query = "CREATE OR REPLACE FUNCTION get_doc_frequencies(" + "    search_terms text[]" + ")"
-				+ "RETURNS TABLE(term text, df bigint) " + "LANGUAGE 'plpgsql' " + "AS $$ " + "BEGIN "
+		String query = 
+				"CREATE OR REPLACE FUNCTION get_doc_frequencies(" + "    search_terms text[]" + ")"
+				+ "RETURNS TABLE(term text, df bigint) " + "LANGUAGE 'plpgsql' " 
+				+ "AS $$ " + "BEGIN "
 				+ "DROP TABLE IF EXISTS search_terms_table; "
 				+ "CREATE TEMP TABLE search_terms_table(term text);		"
-				+ "INSERT INTO search_terms_table SELECT unnest(search_terms); " + "RETURN QUERY			"
-				+ "		SELECT st.term, COUNT(DISTINCT f.docid) as df			"
-				+ "		from features f, search_terms_table st		" + "		WHERE f.term = st.term"
-				+ "		GROUP BY st.term;" + "	END;  $$;";
+				+ "INSERT INTO search_terms_table SELECT unnest(search_terms); " 
+				+ "RETURN QUERY			"
+				+ "		SELECT DISTINCT st.term, f.df			"
+				+ "		from features f, search_terms_table st		" 
+				+ "		WHERE f.term = st.term;" 
+				+ "	END;  $$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();

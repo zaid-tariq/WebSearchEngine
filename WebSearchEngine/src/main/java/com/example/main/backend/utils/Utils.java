@@ -3,12 +3,10 @@ package com.example.main.backend.utils;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.core.io.ClassPathResource;
 
@@ -25,34 +23,7 @@ public class Utils {
 		IOUtils.copy(new ClassPathResource(a_resourceName).getInputStream(), out);
 		return tempFile;
 	}
-
-	public static List<String> getTermsInQuotes(String query) {
-
-		List<String> terms = new ArrayList<String>();
-		Pattern pattern = Pattern.compile("\"([^\"]*)\"");
-		Matcher matcher = pattern.matcher(query);
-		while (matcher.find()) {
-			String term = matcher.group(1);
-			terms.add(term);
-		}
-
-		return terms;
-	}
-
-	public static List<String> getTermsWithoutQuotes(String query) {
-		List<String> searchTerms = new ArrayList<String>();
-		
-		for (String subQuery : Utils.getTermsInQuotes("\"" + query + "\"")) {
-			for (String term : subQuery.split(" ")) {
-				term = term.trim();
-				if (term.length() > 0) {					
-					searchTerms.add(term);
-				}
-			}
-		}
-
-		return searchTerms;
-	}
+	
 
 	/**
 	 * Returns for each term the number of occurrences in the content
@@ -124,5 +95,29 @@ public class Utils {
 			}
 		}
 		return stemmedContent;
+	}
+	
+	public static Map<String, Boolean> splitExpandedQuery(List<String> expandedQueryTerms) {
+		
+		Map<String, Boolean> resolvedTerms = new HashMap<String, Boolean>();
+		for(String term : expandedQueryTerms) {
+			String[] split = term.split("=");
+			resolvedTerms.put(split[0], true);
+			if(split.length > 1) {
+				String[] syns = split[1].split(":");
+				for(String syn : syns) {
+					resolvedTerms.put(syn, false);
+				}
+			}	
+		}
+		return resolvedTerms;
+	}
+	
+	public static String stemTerm(String term) {
+		Stemmer stemmer = new Stemmer();
+		stemmer.add(term.toCharArray(), term.length());
+		stemmer.stem();
+		String stemmedWord = stemmer.toString();
+		return stemmedWord;
 	}
 }

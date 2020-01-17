@@ -1,11 +1,10 @@
 package com.example.main.backend;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
+import com.example.main.backend.utils.Utils;
+
 import java.util.Set;
 
 import net.sf.extjwnl.JWNLException;
@@ -18,10 +17,9 @@ import net.sf.extjwnl.dictionary.Dictionary;
 public final class QueryExpansion {
 	
 	static  Dictionary dict;
-	static boolean useStemmer = false;
 	
 	
-	static List<String> expandQuery(List<String> a_searchTerms) throws JWNLException {
+	static List<String> expandQuery(List<String> a_tildaTerms, List<String> a_nonTildaTerms) throws JWNLException {
 		/*
 		 * function to fetch all synonyms from the wordnet and return CNF
 			stem the terms ?
@@ -38,35 +36,20 @@ public final class QueryExpansion {
 		 
 		if(dict == null) 
 			dict = Dictionary.getDefaultResourceInstance();
-		
-		Map<String, Boolean> resolvedTerms = resolveTildaOperator(a_searchTerms);
 		List<String> expandedTerms = new ArrayList<String>();
 		
-		for(Entry<String, Boolean> entry: resolvedTerms.entrySet()){
-			if(entry.getValue()) {
-				String term = entry.getKey();
+		for(String term: a_tildaTerms){
 				Set<String> synonyms = new HashSet<String>();
 				synonyms.addAll(getSynonymsOfWord(dict.getIndexWord(POS.NOUN, term)));
 				synonyms.addAll(getSynonymsOfWord(dict.getIndexWord(POS.ADVERB, term)));
 				synonyms.addAll(getSynonymsOfWord(dict.getIndexWord(POS.ADJECTIVE, term)));
 				synonyms.addAll(getSynonymsOfWord(dict.getIndexWord(POS.VERB, term)));
 				expandedTerms.add(concatenateStringForCNF(term, synonyms));
-			}
-			else expandedTerms.add(entry.getKey());
 		}	
-		return expandedTerms;
-	}
-
-
-	static Map<String, Boolean> resolveTildaOperator(List<String> a_searchTerms){
-		//TODO:
-		Map<String, Boolean> terms = new HashMap<String, Boolean>();
-		for(String str : a_searchTerms) {
-			str = str.trim();
-			terms.put(str, true);
-		}
 		
-		return terms;
+		for(String term : a_nonTildaTerms)
+			expandedTerms.add(Utils.stemTerm(term));
+		return expandedTerms;
 	}
 	
 	static Set<String> getSynonymsOfWord(IndexWord a_word) {
@@ -76,12 +59,6 @@ public final class QueryExpansion {
 			for(Synset synset : a_word.getSenses()) {
 				for(Word synonym: synset.getWords()) {
 					String lemma = synonym.getLemma();
-					if(useStemmer) {
-						Stemmer stemmer = new Stemmer();
-						stemmer.add(lemma.toCharArray(), lemma.length());
-						stemmer.stem();
-						lemma = stemmer.toString();
-					}
 					synonyms.add(lemma);
 				}
 			}
@@ -90,7 +67,7 @@ public final class QueryExpansion {
 	}
 	
 	static String concatenateStringForCNF(String term, Set<String> terms) {
-		String concat = term;
+		String concat = Utils.stemTerm(term);
 		boolean isFirst = true;
 		for(String syn : terms) {
 			if(isFirst) {
@@ -98,52 +75,10 @@ public final class QueryExpansion {
 				concat += "=";
 			}
 			else concat += ":";
-			concat += syn;
+			concat += Utils.stemTerm(syn);
 		}
 		System.out.println(concat);
 		return concat;
 	}
 	
-	public static void main(String ...strings) throws JWNLException {
-		
-		Stemmer stemmer = new Stemmer();
-		
-		List<String> terms = new ArrayList<String>();
-		
-		stemmer.add("running".toCharArray(), "running".length());
-		stemmer.stem();
-		String stemmedWord = stemmer.toString();
-		terms.add(stemmedWord);
-		
-		stemmer = new Stemmer();
-		stemmer.add("ran".toCharArray(), "ran".length());
-		stemmer.stem();
-		stemmedWord = stemmer.toString();
-		terms.add(stemmedWord);
-		
-		stemmer = new Stemmer();
-		stemmer.add("runs".toCharArray(), "runs".length());
-		stemmer.stem();
-		stemmedWord = stemmer.toString();
-		terms.add(stemmedWord);
-		
-		terms.add("run");
-		terms.add("runs");
-		terms.add("late");
-		
-		stemmer = new Stemmer();
-		stemmer.add("eater".toCharArray(), "eater".length());
-		stemmer.stem();
-		stemmedWord = stemmer.toString();
-		terms.add(stemmedWord);
-		
-		
-		stemmer = new Stemmer();
-		stemmer.add("foodie".toCharArray(), "foodie".length());
-		stemmer.stem();
-		stemmedWord = stemmer.toString();
-		terms.add("foodie");
-		
-		System.out.println(expandQuery(terms));
-	}
 }

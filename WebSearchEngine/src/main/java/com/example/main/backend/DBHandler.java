@@ -115,7 +115,7 @@ public class DBHandler {
 
 		List<List<String>> searchTerms = QueryParser.getTermsWithoutQuotes(query);
 		List<String> expandedQueryTerms = QueryExpansion.expandQuery(searchTerms.get(QueryParser.TILDA_TERMS), searchTerms.get(QueryParser.NON_TILDA_TERMS));	
-		String[] expandedQueryTermsArr = (String[]) expandedQueryTerms.toArray(new String[searchTerms.size()]);
+		String[] expandedQueryTermsArr = (String[]) expandedQueryTerms.toArray(new String[expandedQueryTerms.size()]);
 		
 		List<String> requiredTerms = QueryParser.getTermsInQuotes(query);
 		String[] requiredTermsArr = new String[requiredTerms.size()];

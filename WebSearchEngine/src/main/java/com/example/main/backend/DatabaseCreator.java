@@ -26,10 +26,15 @@ public class DatabaseCreator {
 			createViewsOnFeaturesTable(connection);
 			createLinksTable(connection);
 			createDocumnetStatsTable(connection);
+			createShinglesTable(connection);
+			createJaccardValuesTable(connection);
 			createUpdateScoresunction(connection);
 			createFunctionConjunctive_search(connection);
 			createFunctionDisjunctive_search(connection);
 			createFunctionDisjunctiveImage_search(connection);
+			create_computeJaccardValues_function(connection);
+			create_get_similar_documents_function(connection);
+			create_makeShingles_function(connection);
 			createIndices(connection);
 			create_function_get_related_terms_to_less_frequent_terms(connection);
 			create_alternate_query_scorer_function(connection);
@@ -210,6 +215,20 @@ public class DatabaseCreator {
 				statement.execute(query);
 				statement.close();
 	}
+	
+	private void createShinglesTable(Connection con) throws SQLException {
+		PreparedStatement statement = con.prepareStatement(
+				"CREATE TABLE IF NOT EXISTS shingles_table (docid PRIMARY KEY, shingle TEXT PRIMARY KEY)");
+		statement.execute();
+		statement.close();
+	}
+	
+	private void createJaccardValuesTable(Connection con) throws SQLException {
+		PreparedStatement statement = con.prepareStatement(
+				"CREATE TABLE IF NOT EXISTS jaccard_values (d1 int PRIMARY KEY, d2 int PRIMARY KEY , jaccardVal real)");
+		statement.execute();
+		statement.close();
+	}
 
 	private void createFeatureTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
@@ -307,20 +326,19 @@ public class DatabaseCreator {
 	
 	private void createUpdateScoresunction(Connection con) throws SQLException {
 		String query = 
-		"" + 
 		"CREATE OR REPLACE PROCEDURE update_scores(k real, b real)   " + 
 		"    LANGUAGE 'plpgsql'   " + 
-		"    AS $$   " + 
+		"    AS $$   "+ 
+		"	 DECLARE avg_num_of_terms real;" +
 		"    BEGIN   " + 
-		"    " + 
-		"    UPDATE features f   " + 
+		"    avg_num_of_terms := SELECT avg_num_of_terms FROM doc_stats_table;	"+
+		"	 UPDATE features as f   " + 
 		"    SET score_tfidf = f.idf_tfidf * (1.0 + LOG(f.term_frequency)) ,   " + 
-		"        score_okapi = f.idf_okapi * ( f.term_frequency * ($1 + 1) / ( f.term_frequency *($1 * (1-$2+($2 * d.num_of_terms/doc_stats_table.avg_num_of_terms)))))  " + 
-		"    FROM features f2, doc_stats_table, documents d" + 
+		"        score_okapi = f.idf_okapi * (f.term_frequency * ($1 + 1) / ( f.term_frequency *($1 * (1-$2+($2 * d.num_of_terms/avg_num_of_terms)))))" + 
+		"    FROM features f2, documents d" + 
 		"    WHERE f.term = f2.term " + 
 		"    AND f.docid = f2.docid " + 
 		"    AND f.docid=d.docid;" + 
-		"     " + 
 		"    END; $$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);
@@ -331,15 +349,15 @@ public class DatabaseCreator {
 		String query = 
 		"CREATE OR REPLACE PROCEDURE update_idf_scores_function()   " + 
 		"    LANGUAGE 'plpgsql'   " + 
-		"    AS $$   " + 
+		"    AS $$   "+ 
+		"	 DECLARE total_docs int;" + 
 		"    BEGIN   " + 
-		" " + 
-		"      UPDATE features f1" + 
-		"      SET idf_tfidf = LOG(1.0 * doc_stats_table.total_docs / f2.df), " + 
-		"          idf_okapi = LOG((doc_stats_table.total_docs - f2.df + 0.5)/(f2.df + 0.5)) " + 
-		"      FROM features f2,doc_stats_table" + 
-		"      WHERE f1.term = f2.term AND f1.docid = f2.docid;" + 
-		"" + 
+		"	 total_docs := SELECT num_docs FROM doc_stats_table;	"+
+		"    UPDATE features f1" + 
+		"    SET idf_tfidf = LOG(1.0 * total_docs / f2.df), " + 
+		"        idf_okapi = LOG((total_docs - f2.df + 0.5)/(f2.df + 0.5)) " + 
+		"    FROM features f2" + 
+		"    WHERE f1.term = f2.term AND f1.docid = f2.docid;" + 
 		"    END; $$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);
@@ -388,6 +406,116 @@ public class DatabaseCreator {
 		statement.execute(query);
 		statement.close();
 	}
+	
+	
+	private void create_get_similar_documents_function(Connection con) throws SQLException {
+		
+		String query = 
+			"CREATE OR REPLACE FUNCTION get_similar_documents(docid int, thresh real)" + 
+			"RETURNS TABLE(docid2 int, jaccardVal real)" + 
+			"LANGUAGE 'plpgsql'" + 
+			"AS $$ " + 
+			"BEGIN" + 
+			"  RETURN QUERY" + 
+			"    SELECT jdp.d2, jdp.jaccardVal" + 
+			"    FROM jaccard_values jdp" + 
+			"    WHERE jdp.d1 = docid AND jdp.jaccardVal >= thresh;" + 
+			"END $$";
+		
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	
+	private void create_makeShingles_function(Connection con) throws SQLException {
+		
+		String query = 
+			"CREATE OR REPLACE PROCEDURE makeShingles(K int)   " + 
+			"    LANGUAGE 'plpgsql'   " + 
+			"    AS $$   " + 
+			"    DECLARE " + 
+			"      t_row documents%rowtype;" + 
+			"      content text;" + 
+			"      doc_terms text[];" + 
+			"      term text;" + 
+			"      shingle text;" + 
+			"      i int;" + 
+			"      j int;" + 
+			"" + 
+			"    BEGIN   " + 
+			"      TRUNCATE TABLE shingles_table;" + 
+			"      FOR t_row IN SELECT * FROM documents LIMIT 10000" + 
+			"      --this will not check for existing documents in the DB. " + 
+			"      --It'll recalculate shingles even if the doc already has been shingle-ized." + 
+			"      LOOP" + 
+			"          content := t_row.content;" + 
+			"          doc_terms := regexp_split_to_array(content, E'\\\\s+');" + 
+			"" + 
+			"          FOR i in 1 .. ( array_length(doc_terms) - K )" + 
+			"          LOOP" + 
+			"            shingle := doc_terms[i];" + 
+			"" + 
+			"            FOR j in 1 .. K" + 
+			"            LOOP" + 
+			"              term := doc_terms[i+j];" + 
+			"              shingle := shingle || \",\" || term;" + 
+			"            END LOOP;" + 
+			"" + 
+			"            INSERT INTO shingles_table" + 
+			"            VALUES (t_row.docid, shingle)" + 
+			"            ON CONFLICT DO NOTHING;" + 
+			"" + 
+			"          END LOOP;" + 
+			"      END LOOP;" + 
+			"    END $$;";
+		
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+
+
+	private void create_computeJaccardValues_function(Connection con) throws SQLException {
+		
+		String query = 
+			"CREATE OR REPLACE PROCEDURE computeJaccardValues()  " + 
+			"    LANGUAGE 'plpgsql'   " + 
+			"    AS $$   " + 
+			"    BEGIN" + 
+			"	   TRUNCATE TABLE jaccard_values;"+
+			"      WITH shingles_table_temp AS (" + 
+			"          SELECT docid, array_agg(shingle) shingles" + 
+			"          FROM shingles_table" + 
+			"          GROUP BY docid" + 
+			"        )" + 
+			"      INSERT INTO jaccard_values" + 
+			"      SELECT st1.docid d1, st2.docid d2,  (" + 
+			"     --a dynamic query can calculate this faster than unnesting probably" + 
+			"                    (" + 
+			"                      SELECT COUNT(*)" + 
+			"                      FROM (" + 
+			"                        SELECT unnest(st1.shingles)" + 
+			"                        INTERSECT " + 
+			"                        SELECT unnest(st2.shingles)" + 
+			"                      ) a1" + 
+			"                    ) / (" + 
+			"                       SELECT COUNT(*)" + 
+			"                       FROM (" + 
+			"                        SELECT unnest(st1.shingles) " + 
+			"                        UNION " + 
+			"                        SELECT unnest(st2.shingles)" + 
+			"                      ) a2" + 
+			"                    )" + 
+			"              ) jaccardVal" + 
+			"      FROM shingles_table_temp st1, shingles_table_temp st2;" + 
+			"    END $$;";
+		
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
 	
 	
 	private void createViewsOnFeaturesTable(Connection con) throws SQLException {

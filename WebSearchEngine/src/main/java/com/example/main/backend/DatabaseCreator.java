@@ -1,9 +1,13 @@
 package com.example.main.backend;
 
+import java.io.IOException;
 import java.sql.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import com.example.main.backend.utils.GermanDict;
+import com.example.main.backend.utils.Utils;
 
 @Component
 public class DatabaseCreator {
@@ -52,8 +56,12 @@ public class DatabaseCreator {
 			createUpdateIdfScoresunction(connection);
 			createUpdateScoresunction(connection);
 			createGetDocFrequenciesFunction(connection);
+			createGermanDictTable(connection);
+			GermanDict.saveGermanDictToDB(connection);
 
 		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
 			if (connection != null) {
@@ -219,6 +227,14 @@ public class DatabaseCreator {
 				Statement statement = connection.createStatement();
 				statement.execute(query);
 				statement.close();
+	}
+	
+	
+	private void createGermanDictTable(Connection con) throws SQLException {
+		PreparedStatement statement = con.prepareStatement(
+				"CREATE TABLE IF NOT EXISTS germanDict(word TEXT, syn TEXT)");
+		statement.execute();
+		statement.close();
 	}
 	
 	private void createMinhashTable(Connection con) throws SQLException {

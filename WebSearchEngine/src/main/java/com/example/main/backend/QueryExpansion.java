@@ -1,8 +1,12 @@
 package com.example.main.backend;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+
+import com.example.main.backend.utils.GermanDict;
 import com.example.main.backend.utils.Utils;
 
 import java.util.Set;
@@ -44,11 +48,26 @@ public final class QueryExpansion {
 				synonyms.addAll(getSynonymsOfWord(dict.getIndexWord(POS.ADVERB, term)));
 				synonyms.addAll(getSynonymsOfWord(dict.getIndexWord(POS.ADJECTIVE, term)));
 				synonyms.addAll(getSynonymsOfWord(dict.getIndexWord(POS.VERB, term)));
-				expandedTerms.add(concatenateStringForCNF(term, synonyms));
+				expandedTerms.add(concatenateStringForCNF(term, synonyms, true));
 		}	
 		
 		for(String term : a_nonTildaTerms)
 			expandedTerms.add(Utils.stemTerm(term));
+		return expandedTerms;
+	}
+	
+	static List<String> expandGermanQuery(List<String> a_tildaTerms, List<String> a_nonTildaTerms, Connection con) throws JWNLException, SQLException {
+
+		List<String> expandedTerms = new ArrayList<String>();
+		
+		for(String term: a_tildaTerms){
+			Set<String> synonyms = new HashSet<String>();
+			synonyms.addAll(GermanDict.getSynonymsForGermanTerm(term, con));
+			expandedTerms.add(concatenateStringForCNF(term, synonyms, false));
+		}	
+		
+		for(String term : a_nonTildaTerms)
+			expandedTerms.add(term);
 		return expandedTerms;
 	}
 	
@@ -66,8 +85,8 @@ public final class QueryExpansion {
 		return synonyms;		
 	}
 	
-	static String concatenateStringForCNF(String term, Set<String> terms) {
-		String concat = Utils.stemTerm(term);
+	static String concatenateStringForCNF(String term, Set<String> terms, boolean stemTerms) {
+		String concat = stemTerms ? Utils.stemTerm(term): term;
 		boolean isFirst = true;
 		for(String syn : terms) {
 			if(isFirst) {
@@ -75,7 +94,7 @@ public final class QueryExpansion {
 				concat += "=";
 			}
 			else concat += ":";
-			concat += Utils.stemTerm(syn);
+			concat += stemTerms ? Utils.stemTerm(syn): syn;
 		}
 		System.out.println(concat);
 		return concat;

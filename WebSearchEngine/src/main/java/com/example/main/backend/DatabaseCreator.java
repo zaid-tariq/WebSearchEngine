@@ -218,14 +218,14 @@ public class DatabaseCreator {
 	
 	private void createShinglesTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
-				"CREATE TABLE IF NOT EXISTS shingles_table (docid PRIMARY KEY, shingle TEXT PRIMARY KEY)");
+				"CREATE TABLE IF NOT EXISTS shingles_table (docid INT NOT NULL, shingle TEXT NOT NULL, PRIMARY KEY (docid, shingle))");
 		statement.execute();
 		statement.close();
 	}
 	
 	private void createJaccardValuesTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
-				"CREATE TABLE IF NOT EXISTS jaccard_values (d1 int PRIMARY KEY, d2 int PRIMARY KEY , jaccardVal real)");
+				"CREATE TABLE IF NOT EXISTS jaccard_values (d1 int NOT NULL, d2 int NOT NULL, jaccardVal real, PRIMARY KEY(d1,d2))");
 		statement.execute();
 		statement.close();
 	}
@@ -305,11 +305,10 @@ public class DatabaseCreator {
 		statement.close();
 	}
 
-
 	private void createGetDocFrequenciesFunction(Connection con) throws SQLException {
 		String query = 
 				"CREATE OR REPLACE FUNCTION get_doc_frequencies(" + "    search_terms text[]" + ")"
-				+ "RETURNS TABLE(term text, df bigint) " + "LANGUAGE 'plpgsql' " 
+				+ "RETURNS TABLE(term text, df int) " + "LANGUAGE 'plpgsql' " 
 				+ "AS $$ " + "BEGIN "
 				+ "DROP TABLE IF EXISTS search_terms_table; "
 				+ "CREATE TEMP TABLE search_terms_table(term text);		"
@@ -331,7 +330,7 @@ public class DatabaseCreator {
 		"    AS $$   "+ 
 		"	 DECLARE avg_num_of_terms real;" +
 		"    BEGIN   " + 
-		"    avg_num_of_terms := SELECT avg_num_of_terms FROM doc_stats_table;	"+
+		"    SELECT (SELECT d.avg_num_of_terms FROM doc_stats_table d) INTO avg_num_of_terms;"+
 		"	 UPDATE features as f   " + 
 		"    SET score_tfidf = f.idf_tfidf * (1.0 + LOG(f.term_frequency)) ,   " + 
 		"        score_okapi = f.idf_okapi * (f.term_frequency * ($1 + 1) / ( f.term_frequency *($1 * (1-$2+($2 * d.num_of_terms/avg_num_of_terms)))))" + 
@@ -352,7 +351,7 @@ public class DatabaseCreator {
 		"    AS $$   "+ 
 		"	 DECLARE total_docs int;" + 
 		"    BEGIN   " + 
-		"	 total_docs := SELECT num_docs FROM doc_stats_table;	"+
+		"	 SELECT (SELECT d.total_docs FROM doc_stats_table d) INTO total_docs;	"+
 		"    UPDATE features f1" + 
 		"    SET idf_tfidf = LOG(1.0 * total_docs / f2.df), " + 
 		"        idf_okapi = LOG((total_docs - f2.df + 0.5)/(f2.df + 0.5)) " + 
@@ -363,7 +362,6 @@ public class DatabaseCreator {
 		statement.execute(query);
 		statement.close();
 	}
-	
 	
 	private void createUpdateDocFrequenceFunction(Connection con) throws SQLException {
 		String query = 
@@ -392,15 +390,13 @@ public class DatabaseCreator {
 		"    LANGUAGE 'plpgsql'   " + 
 		"    AS $$   " + 
 		"    BEGIN   " + 
+		"    TRUNCATE TABLE doc_stats_table;"+
 		"    WITH   " + 
 		"      docs_stats AS( " + 
 		"          SELECT COUNT(docid) num_docs, AVG(num_of_terms) avg_num_terms  " + 
 		"          FROM documents  " + 
-		"      )" + 
-		"      UPDATE doc_stats_table" + 
-		"      SET total_docs = ds.num_docs," + 
-		"          avg_num_of_terms = ds.avg_num_terms" + 
-		"      FROM docs_stats ds;" + 
+		"      )" +
+	    "    INSERT INTO doc_stats_table (SELECT * FROM docs_stats);" +
 		"    END; $$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);
@@ -446,8 +442,6 @@ public class DatabaseCreator {
 			"    BEGIN   " + 
 			"      TRUNCATE TABLE shingles_table;" + 
 			"      FOR t_row IN SELECT * FROM documents LIMIT 10000" + 
-			"      --this will not check for existing documents in the DB. " + 
-			"      --It'll recalculate shingles even if the doc already has been shingle-ized." + 
 			"      LOOP" + 
 			"          content := t_row.content;" + 
 			"          doc_terms := regexp_split_to_array(content, E'\\\\s+');" + 
@@ -468,7 +462,7 @@ public class DatabaseCreator {
 			"" + 
 			"          END LOOP;" + 
 			"      END LOOP;" + 
-			"    END $$;";
+			"    END; $$;";
 		
 		Statement statement = con.createStatement();
 		statement.execute(query);
@@ -491,7 +485,6 @@ public class DatabaseCreator {
 			"        )" + 
 			"      INSERT INTO jaccard_values" + 
 			"      SELECT st1.docid d1, st2.docid d2,  (" + 
-			"     --a dynamic query can calculate this faster than unnesting probably" + 
 			"                    (" + 
 			"                      SELECT COUNT(*)" + 
 			"                      FROM (" + 
@@ -509,7 +502,7 @@ public class DatabaseCreator {
 			"                    )" + 
 			"              ) jaccardVal" + 
 			"      FROM shingles_table_temp st1, shingles_table_temp st2;" + 
-			"    END $$;";
+			"    END; $$;";
 		
 		Statement statement = con.createStatement();
 		statement.execute(query);

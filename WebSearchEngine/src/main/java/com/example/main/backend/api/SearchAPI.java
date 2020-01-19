@@ -13,7 +13,6 @@ import com.example.main.backend.QueryParser;
 import com.example.main.backend.SpellChecker;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.dao.Query;
-import com.example.main.backend.utils.Utils;
 
 @Component
 public class SearchAPI {

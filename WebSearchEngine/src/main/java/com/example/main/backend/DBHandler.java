@@ -1,5 +1,6 @@
 package com.example.main.backend;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -114,7 +115,11 @@ public class DBHandler {
 		query = query.toLowerCase();
 
 		List<List<String>> searchTerms = QueryParser.getTermsWithoutQuotes(query);
-		List<String> expandedQueryTerms = QueryExpansion.expandQuery(searchTerms.get(QueryParser.TILDA_TERMS), searchTerms.get(QueryParser.NON_TILDA_TERMS));	
+		List<String> expandedQueryTerms = QueryExpansion.expandQuery(
+				searchTerms.get(QueryParser.TILDA_TERMS), searchTerms.get(QueryParser.NON_TILDA_TERMS));	
+		//if(language == "German") 	
+			//expandedQueryTerms = QueryExpansion.expandGermanQuery(searchTerms.get(QueryParser.TILDA_TERMS), searchTerms.get(QueryParser.NON_TILDA_TERMS), con);
+		
 		String[] expandedQueryTermsArr = (String[]) expandedQueryTerms.toArray(new String[expandedQueryTerms.size()]);
 		
 		List<String> requiredTerms = QueryParser.getTermsInQuotes(query);

@@ -259,8 +259,9 @@ public class DBHandler {
 		PreparedStatement sql = con.prepareStatement("SELECT total_docs from doc_stats_table");
 		sql.execute();
 		ResultSet results = sql.getResultSet();
-		results.next();
-		int retVal = results.getInt(1);
+		int retVal = 0;
+		if(results.next())
+			retVal = results.getInt(1);
 		results.close();
 		con.close();
 		return retVal;

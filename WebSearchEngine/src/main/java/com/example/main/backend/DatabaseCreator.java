@@ -459,7 +459,7 @@ public class DatabaseCreator {
 			"            FOR j in 1 .. K" + 
 			"            LOOP" + 
 			"              term := doc_terms[i+j];" + 
-			"              shingle := shingle || \",\" || term;" + 
+			"              shingle := shingle || \" \" || term;" + 
 			"            END LOOP;" + 
 			"" + 
 			"            INSERT INTO shingles_table" + 

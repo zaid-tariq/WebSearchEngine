@@ -308,7 +308,7 @@ public class DatabaseCreator {
 	private void createGetDocFrequenciesFunction(Connection con) throws SQLException {
 		String query = 
 				"CREATE OR REPLACE FUNCTION get_doc_frequencies(" + "    search_terms text[]" + ")"
-				+ "RETURNS TABLE(term text, df bigint) " + "LANGUAGE 'plpgsql' " 
+				+ "RETURNS TABLE(term text, df int) " + "LANGUAGE 'plpgsql' " 
 				+ "AS $$ " + "BEGIN "
 				+ "DROP TABLE IF EXISTS search_terms_table; "
 				+ "CREATE TEMP TABLE search_terms_table(term text);		"

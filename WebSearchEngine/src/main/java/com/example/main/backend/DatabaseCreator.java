@@ -28,6 +28,8 @@ public class DatabaseCreator {
 			createDocumnetStatsTable(connection);
 			createShinglesTable(connection);
 			createJaccardValuesTable(connection);
+			createMinhashTable(connection);
+			createMinhashJaccardValuesTable(connection);
 			createUpdateScoresunction(connection);
 			createFunctionConjunctive_search(connection);
 			createFunctionDisjunctive_search(connection);
@@ -35,6 +37,9 @@ public class DatabaseCreator {
 			create_computeJaccardValues_function(connection);
 			create_get_similar_documents_function(connection);
 			create_makeShingles_function(connection);
+			create_minhash_jaccard_function(connection);
+			create_minhash_function(connection);
+			create_shingle_hashing_function(connection);
 			createIndices(connection);
 			create_function_get_related_terms_to_less_frequent_terms(connection);
 			create_alternate_query_scorer_function(connection);
@@ -216,6 +221,13 @@ public class DatabaseCreator {
 				statement.close();
 	}
 	
+	private void createMinhashTable(Connection con) throws SQLException {
+		PreparedStatement statement = con.prepareStatement(
+				"CREATE TABLE IF NOT EXISTS minhash_table (docid INT NOT NULL PRIMARY KEY, minhash INT NOT NULL)");
+		statement.execute();
+		statement.close();
+	}
+	
 	private void createShinglesTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
 				"CREATE TABLE IF NOT EXISTS shingles_table (docid INT NOT NULL, shingle TEXT NOT NULL, PRIMARY KEY (docid, shingle))");
@@ -226,6 +238,13 @@ public class DatabaseCreator {
 	private void createJaccardValuesTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
 				"CREATE TABLE IF NOT EXISTS jaccard_values (d1 int NOT NULL, d2 int NOT NULL, jaccardVal real, PRIMARY KEY(d1,d2))");
+		statement.execute();
+		statement.close();
+	}
+	
+	private void createMinhashJaccardValuesTable(Connection con) throws SQLException {
+		PreparedStatement statement = con.prepareStatement(
+				"CREATE TABLE IF NOT EXISTS jaccard_values_minhash (d1 int NOT NULL, d2 int NOT NULL, jaccardVal real, PRIMARY KEY(d1,d2))");
 		statement.execute();
 		statement.close();
 	}
@@ -467,6 +486,91 @@ public class DatabaseCreator {
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();
+	}
+	
+	private void create_shingle_hashing_function(Connection con) throws SQLException{
+		
+		String query = 
+				"CREATE OR REPLACE FUNCTION hash_shingle_to_int(shingle text) RETURNS bigint AS $$" + 
+				"    DECLARE" + 
+				"        result  bigint;" + 
+				"    BEGIN" + 
+				"        EXECUTE 'SELECT x' || quote_literal(substr(md5(shingle), 1,7)) || '::int' INTO result;" + 
+				"        RETURN result;" + 
+				"    END;" + 
+				"    $$ LANGUAGE plpgsql;";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+		
+	}
+	
+	private void create_minhash_function(Connection con) throws SQLException{
+		
+		String query = 
+				"CREATE OR REPLACE PROCEDURE do_minhash_table()   " + 
+				"    LANGUAGE 'plpgsql'   " + 
+				"    AS $$   " + 
+				"    BEGIN" + 
+				"      TRUNCATE minhash_table;" + 
+				"      INSERT INTO minhash_table" + 
+				"        SELECT docid, hash_shingle_to_int(shingle) minhash" + 
+				"        FROM shingles_table;" + 
+				"    END; $$";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+		
+	}
+
+
+	private void create_minhash_jaccard_function(Connection con) throws SQLException{
+		
+		String query = 
+				"CREATE OR REPLACE PROCEDURE calculate_jaccard_minhash(N int)" + 
+				"    LANGUAGE 'plpgsql'   " + 
+				"    AS $$   " + 
+				"    BEGIN" + 
+				"	 TRUNCATE TABLE jaccard_values_minhash;"+
+				"    WITH n_minhash_table AS (" + 
+				"        SELECT  t2.docid, array_agg(t2.minhash) hashes" + 
+				"        FROM (" + 
+				"          SELECT DISTINCT docid" + 
+				"          FROM minhash_table" + 
+				"        ) d1 JOIN LATERAL (" + 
+				"          SELECT docid, minhash" + 
+				"          FROM minhash_table m2" + 
+				"          WHERE m2.docid = d1.docid" + 
+				"          ORDER BY minhash" + 
+				"          LIMIT N" + 
+				"        ) t2 ON true" + 
+				"        GROUP BY t2.docid"	+ 
+				"		 LIMIT 10000" + 
+				"      )" + 
+				"    INSERT INTO jaccard_values_minhash"+
+				"	 SELECT st1.docid d1, st2.docid d2,  (" + 
+				"                    (" + 
+				"                      SELECT COUNT(*)" + 
+				"                      FROM (" + 
+				"                        SELECT unnest(st1.hashes)" + 
+				"                        INTERSECT " + 
+				"                        SELECT unnest(st2.hashes)" + 
+				"                      ) a1" + 
+				"                    ) / (" + 
+				"                       SELECT COUNT(*)" + 
+				"                       FROM (" + 
+				"                        SELECT unnest(st1.hashes) " + 
+				"                        UNION " + 
+				"                        SELECT unnest(st2.hashes)" + 
+				"                      ) a2" + 
+				"                    )" + 
+				"              ) jaccardVal" + 
+				"      FROM n_minhash_table st1, n_minhash_table st2;" + 
+				"  END; $$;";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+		
 	}
 
 

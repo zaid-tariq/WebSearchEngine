@@ -1,6 +1,5 @@
 package com.example.main.backend;
 
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -164,14 +163,14 @@ public class DBHandler {
 				String term = results.getString(2);
 				float score_tfidf = results.getFloat(3);
 				float score_okapi = results.getFloat(4);
-				if(queryTermsMap.get(term) == false) { //term is not in base query
+				if(queryTermsMap.containsKey(term) && queryTermsMap.get(term) == false) { //term is not in base query
 					score_tfidf /= 3; //weigh the expansion terms less than query terms by a factor of 3
 					score_okapi /= 3;
 				}
 				if (!resDocs.containsKey(url))
 					resDocs.put(url, new DBResponseDocument(url));
 				DBResponseDocument doc = resDocs.get(url);
-				doc.add_term(term, score_tfidf, score_okapi, 0);
+				doc.add_term(term, score_tfidf, score_okapi, score_okapi);
 				doc.scoringMethod = scoringMethod;
 			}
 		} else if (searchMode == SearchAPI.IMAGE_MODE) {

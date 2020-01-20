@@ -6,12 +6,12 @@
 ## Build instructions
 
 Checkout the project repository. Build using Maven.<br/>
-`mvn clean package -Dmaven.test.skip=true     `
+`mvn clean package -Dmaven.test.skip=true`
 <br/>
 Use the following command to run the specific part of the project:
 `mvn spring-boot:run -Dspring-boot.run.profiles=#profiles`
 
-Replace `#profiles` by any of the arguments shown in the table below. If you want to run multiple profiles at a time just list them comma separated. We recommend to run every profile of the project in it's own process because you can then start and stop any part without killing the other parts.
+Replace `#profiles` by any of the arguments shown in the table below. If you want to run multiple profiles at a time just list them comma separated. We recommend to run the crawler and indexer profile at the same time.
 
 | Command | Description |
 |---------|-------------|
@@ -68,7 +68,7 @@ Arguments:
 |indexing.interval.milliseconds| Time between two indexing processes|
 
 ##Going live!
-The web interface is accessible at:
+The TUgle web interface is accessible at:
 
 [http://isproj-vm01.informatik.uni-kl.de:8080/is-project/index.html](http://isproj-vm01.informatik.uni-kl.de:8080/is-project/index.html)
 
@@ -86,6 +86,9 @@ Replace the argument placeholder #1,#2, and #3 by:
 |        |1 - TF*IDF||
 |        |2 - Okapi BM25||
 |        |3 - Combined Score||
+
+The TUgle IMAGES web interface is accesible at:
+[http://isproj-vm01.informatik.uni-kl.de:8080/is-project/images.html](http://isproj-vm01.informatik.uni-kl.de:8080/is-project/images.html)
 
 
 

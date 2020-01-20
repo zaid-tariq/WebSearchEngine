@@ -11,7 +11,7 @@ import com.example.main.backend.dao.Query;
 public class QueryParser {
 	
 	public static final int TILDA_TERMS = 0;
-	public static final int NON_TILDA_TERMS = 0;
+	public static final int NON_TILDA_TERMS = 1;
 	
 	/*
 	 * Unintelligent parser
@@ -113,12 +113,13 @@ public class QueryParser {
 		for(int i = 0; i < tilda_tokens.length; i++) {
 			String sub_query = tilda_tokens[i].trim();
 			if(sub_query.length() > 0) {
-				String[] space_tokens = a_query.split("\\s+");
+				String[] space_tokens = sub_query.split("\\s+");
 				for(int j = 0; j < space_tokens.length; j++) {
 					String term = space_tokens[j].trim();
-					if(j == 0 && tilda_tokens.length > 1)
+					if(i != 0 && j == 0)
 						tildaTerms.add(term);
-					else nonTildaTerms.add(term);						
+					else
+						nonTildaTerms.add(term);						
 				}
 			}
 		}

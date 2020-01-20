@@ -54,9 +54,11 @@ public class SpellChecker {
 		
 		LinkedList<Map.Entry<String,Integer>> newQueries = new LinkedList<Map.Entry<String,Integer>>();
 		for (String qTerm : a_origQueryTerms) {
-			for (Map.Entry<String, Integer> relatedTerm : a_query_and_related_terms.get(qTerm)) {
-				for(Map.Entry<String,Integer> query : queries) {
-					newQueries.add(new AbstractMap.SimpleEntry<String,Integer>((query.getKey() +" "+ relatedTerm.getKey()).trim(), query.getValue()+relatedTerm.getValue()));
+			if(a_query_and_related_terms.containsKey(qTerm)) {
+				for (Map.Entry<String, Integer> relatedTerm : a_query_and_related_terms.get(qTerm)) {
+					for(Map.Entry<String,Integer> query : queries) {
+						newQueries.add(new AbstractMap.SimpleEntry<String,Integer>((query.getKey() +" "+ relatedTerm.getKey()).trim(), query.getValue()+relatedTerm.getValue()));
+					}
 				}
 			}
 			queries = newQueries;
@@ -69,6 +71,6 @@ public class SpellChecker {
 			}
 		}
 		
-		return best.getKey();
+		return best!=null?best.getKey():null;
 	}
 }

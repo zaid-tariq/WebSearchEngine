@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.example.main.backend.utils.GermanDict;
-import com.example.main.backend.utils.Utils;
 
 @Component
 public class DatabaseCreator {

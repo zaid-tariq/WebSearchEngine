@@ -386,11 +386,9 @@ public class DatabaseCreator {
 		"	 DECLARE total_docs int;" + 
 		"    BEGIN   " + 
 		"	 SELECT (SELECT d.total_docs FROM doc_stats_table d) INTO total_docs;	"+
-		"    UPDATE features f1" + 
-		"    SET idf_tfidf = LOG(1.0 * total_docs / f2.df), " + 
-		"        idf_okapi = LOG((total_docs - f2.df + 0.5)/(f2.df + 0.5)) " + 
-		"    FROM features f2" + 
-		"    WHERE f1.term = f2.term AND f1.docid = f2.docid;" + 
+		"    UPDATE features" + 
+		"    SET idf_tfidf = LOG(1.0 * total_docs / df), " + 
+		"        idf_okapi = LOG((total_docs - df + 0.5)/(df + 0.5));"+
 		"    END; $$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);

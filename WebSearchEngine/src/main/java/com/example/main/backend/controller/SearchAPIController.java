@@ -55,28 +55,15 @@ public class SearchAPIController {
 		return "Page not found";
 	}
 	
-	@RequestMapping("/run")
-	public void runCrawlerIndexer() throws SQLException {
+	@RequestMapping("/getErrors")
+	@ResponseBody
+	public ResponseEntity<String> getErrors() throws SQLException {
 		
-		CLIIndexing indexer = new CLIIndexing();
 		DBHandler db = new DBHandler();
 		AutowireCapableBeanFactory factory = appContext.getAutowireCapableBeanFactory();
 		factory.autowireBean(db);
-		DocumentSimilarity.run(db);
-//		 try {
-//			CLIIndexing indexer = new CLIIndexing();
-//			CrawlerScheduler crawler = new CrawlerScheduler();
-//			AutowireCapableBeanFactory factory = appContext.getAutowireCapableBeanFactory();
-//			factory.autowireBean(crawler);
-//			factory.autowireBean(indexer);
-//			 crawler.run();
-//			indexer.run();
-//		} catch (SQLException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (URISyntaxException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
+		//DocumentSimilarity.updateJaccardTables(db);
+		return ResponseEntity.ok().body(DocumentSimilarity.printErrors(db));
+
 	}
 }

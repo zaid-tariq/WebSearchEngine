@@ -556,7 +556,7 @@ public class DatabaseCreator {
 				"          SELECT docid, minhash" + 
 				"          FROM minhash_table m2" + 
 				"          WHERE m2.docid = d1.docid" + 
-				"          ORDER BY minhash" + 
+				"          ORDER BY minhash asc" + 
 				"          LIMIT N" + 
 				"        ) t2 ON true" + 
 				"        GROUP BY t2.docid"	+ 

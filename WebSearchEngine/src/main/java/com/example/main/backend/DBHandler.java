@@ -957,5 +957,48 @@ public class DBHandler {
 		con.close();
 		return simDocs;
 	}
+	
+	public float getAverageJaccardError() throws SQLException {
+		Connection con = getConnection();
+		String query = 
+				"SELECT AVG(err) FROM " + 
+				"(SELECT ABS(actual.jaccardVal-approx.jaccardVal) err " + 
+				"FROM jaccard_values actual " + 
+				"JOIN jaccard_values_minhash approx " + 
+				"ON (actual.d1=approx.d1 AND actual.d2=approx.d2) " + 
+				") a;" ;
+		PreparedStatement stmt = con.prepareStatement(query);
+		stmt.execute();
+		ResultSet rs = stmt.getResultSet();
+		float error = 0;
+		if(rs.next()) 
+			error = rs.getFloat(1);
+		stmt.close();	
+		con.close();
+		return error;
+	}
+	
+	public float getJaccardQuartileError(float quartile) throws SQLException {
+		Connection con = getConnection();
+		String query = 
+				"SELECT percentile_disc(?) WITHIN GROUP(ORDER BY err) FROM " + 
+				"(SELECT ABS(actual.jaccardVal-approx.jaccardVal) err " + 
+				"FROM jaccard_values actual " + 
+				"JOIN jaccard_values_minhash approx " + 
+				"ON (actual.d1=approx.d1 AND actual.d2=approx.d2) " + 
+				") a;" ;
+		PreparedStatement stmt = con.prepareStatement(query);
+		stmt.setFloat(1, quartile);
+		stmt.execute();
+		ResultSet rs = stmt.getResultSet();
+		float error = 0;
+		if(rs.next()) 
+			error = rs.getFloat(1);
+		stmt.close();	
+		con.close();
+		return error;
+	}
+	
+	
 
 }

@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.main.CLIIndexing;
 import com.example.main.CrawlerScheduler;
+import com.example.main.backend.DBHandler;
 import com.example.main.backend.api.SearchAPI;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
+import com.example.main.backend.utils.DocumentSimilarity;
 
 
 @RestController
@@ -54,21 +56,27 @@ public class SearchAPIController {
 	}
 	
 	@RequestMapping("/run")
-	public void runCrawlerIndexer() {
-		 try {
-			CLIIndexing indexer = new CLIIndexing();
-			CrawlerScheduler crawler = new CrawlerScheduler();
-			AutowireCapableBeanFactory factory = appContext.getAutowireCapableBeanFactory();
-			factory.autowireBean(crawler);
-			factory.autowireBean(indexer);
-			 crawler.run();
-			indexer.run();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (URISyntaxException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	public void runCrawlerIndexer() throws SQLException {
+		
+		CLIIndexing indexer = new CLIIndexing();
+		DBHandler db = new DBHandler();
+		AutowireCapableBeanFactory factory = appContext.getAutowireCapableBeanFactory();
+		factory.autowireBean(db);
+		DocumentSimilarity.run(db);
+//		 try {
+//			CLIIndexing indexer = new CLIIndexing();
+//			CrawlerScheduler crawler = new CrawlerScheduler();
+//			AutowireCapableBeanFactory factory = appContext.getAutowireCapableBeanFactory();
+//			factory.autowireBean(crawler);
+//			factory.autowireBean(indexer);
+//			 crawler.run();
+//			indexer.run();
+//		} catch (SQLException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (URISyntaxException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 	}
 }

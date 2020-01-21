@@ -904,5 +904,58 @@ public class DBHandler {
 
 		return new Snippet(markedString, -1, notExists);
 	}
+	
+	
+	public void callMakeShinglesFunction(int k) throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL makeShingles(?)");
+		query.setInt(1, k);
+		query.execute();
+		query.close();
+		con.close();
+	}
+	
+	public void callJaccardShinglesFunction() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL computeJaccardValues()");
+		query.execute();
+		query.close();
+		con.close();
+	}
+	
+	public void callDoMinhashFunction() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL do_minhash_table()");
+		query.execute();
+		query.close();
+		con.close();
+	}
+	
+	public void callJaccardMinhashFunction(int n) throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL calculate_jaccard_minhash(?)");
+		query.setInt(1, n);
+		query.execute();
+		query.close();
+		con.close();
+	}
+	
+	public Map<Integer, Float> getSimilarDocuments(int docid, float thresh) throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("SELECT * FROM get_similar_documents(?,))");
+		query.setInt(1, docid);
+		query.setFloat(2, thresh);
+		query.execute();
+		ResultSet rs = query.getResultSet();
+		Map<Integer, Float> simDocs = new HashMap<Integer, Float>();
+		while(rs.next()) {
+			int doc = rs.getInt(1);
+			float jaccardSim = rs.getFloat(2);
+			simDocs.put(doc, jaccardSim);
+		}
+		query.close();	
+		con.close();
+		return simDocs;
+	}
 
 }

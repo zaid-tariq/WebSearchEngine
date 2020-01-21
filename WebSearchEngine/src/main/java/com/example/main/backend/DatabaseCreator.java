@@ -238,7 +238,7 @@ public class DatabaseCreator {
 	
 	private void createMinhashTable(Connection con) throws SQLException {
 		PreparedStatement statement = con.prepareStatement(
-				"CREATE TABLE IF NOT EXISTS minhash_table (docid INT NOT NULL PRIMARY KEY, minhash INT NOT NULL)");
+				"CREATE TABLE IF NOT EXISTS minhash_table (docid INT NOT NULL, minhash INT NOT NULL)");
 		statement.execute();
 		statement.close();
 	}
@@ -475,19 +475,19 @@ public class DatabaseCreator {
 			"" + 
 			"    BEGIN   " + 
 			"      TRUNCATE TABLE shingles_table;" + 
-			"      FOR t_row IN SELECT * FROM documents LIMIT 10000" + 
+			"      FOR t_row IN SELECT * FROM documents WHERE num_of_terms > 0" + 
 			"      LOOP" + 
 			"          content := t_row.content;" + 
 			"          doc_terms := regexp_split_to_array(content, E'\\\\s+');" + 
 			"" + 
-			"          FOR i in 1 .. ( array_length(doc_terms) - K )" + 
+			"          FOR i in 1 .. ( array_length(doc_terms,1) - K )" + 
 			"          LOOP" + 
 			"            shingle := doc_terms[i];" + 
 			"" + 
 			"            FOR j in 1 .. K" + 
 			"            LOOP" + 
 			"              term := doc_terms[i+j];" + 
-			"              shingle := shingle || \" \" || term;" + 
+			"              shingle := shingle || ' ' || term;" + 
 			"            END LOOP;" + 
 			"" + 
 			"            INSERT INTO shingles_table" + 
@@ -556,7 +556,7 @@ public class DatabaseCreator {
 				"          SELECT docid, minhash" + 
 				"          FROM minhash_table m2" + 
 				"          WHERE m2.docid = d1.docid" + 
-				"          ORDER BY minhash" + 
+				"          ORDER BY minhash asc" + 
 				"          LIMIT N" + 
 				"        ) t2 ON true" + 
 				"        GROUP BY t2.docid"	+ 
@@ -571,7 +571,7 @@ public class DatabaseCreator {
 				"                        INTERSECT " + 
 				"                        SELECT unnest(st2.hashes)" + 
 				"                      ) a1" + 
-				"                    ) / (" + 
+				"                    ) * 1.0 / (" + 
 				"                       SELECT COUNT(*)" + 
 				"                       FROM (" + 
 				"                        SELECT unnest(st1.hashes) " + 
@@ -601,6 +601,7 @@ public class DatabaseCreator {
 			"          SELECT docid, array_agg(shingle) shingles" + 
 			"          FROM shingles_table" + 
 			"          GROUP BY docid" + 
+			"		   LIMIT 10000" +  
 			"        )" + 
 			"      INSERT INTO jaccard_values" + 
 			"      SELECT st1.docid d1, st2.docid d2,  (" + 
@@ -611,7 +612,7 @@ public class DatabaseCreator {
 			"                        INTERSECT " + 
 			"                        SELECT unnest(st2.shingles)" + 
 			"                      ) a1" + 
-			"                    ) / (" + 
+			"                    ) * 1.0 / (" + 
 			"                       SELECT COUNT(*)" + 
 			"                       FROM (" + 
 			"                        SELECT unnest(st1.shingles) " + 

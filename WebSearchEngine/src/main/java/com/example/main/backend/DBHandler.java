@@ -904,5 +904,101 @@ public class DBHandler {
 
 		return new Snippet(markedString, -1, notExists);
 	}
+	
+	
+	public void callMakeShinglesFunction(int k) throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL makeShingles(?)");
+		query.setInt(1, k);
+		query.execute();
+		query.close();
+		con.close();
+	}
+	
+	public void callJaccardShinglesFunction() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL computeJaccardValues()");
+		query.execute();
+		query.close();
+		con.close();
+	}
+	
+	public void callDoMinhashFunction() throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL do_minhash_table()");
+		query.execute();
+		query.close();
+		con.close();
+	}
+	
+	public void callJaccardMinhashFunction(int n) throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("CALL calculate_jaccard_minhash(?)");
+		query.setInt(1, n);
+		query.execute();
+		query.close();
+		con.close();
+	}
+	
+	public Map<Integer, Float> getSimilarDocuments(int docid, float thresh) throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement query = con.prepareStatement("SELECT * FROM get_similar_documents(?,))");
+		query.setInt(1, docid);
+		query.setFloat(2, thresh);
+		query.execute();
+		ResultSet rs = query.getResultSet();
+		Map<Integer, Float> simDocs = new HashMap<Integer, Float>();
+		while(rs.next()) {
+			int doc = rs.getInt(1);
+			float jaccardSim = rs.getFloat(2);
+			simDocs.put(doc, jaccardSim);
+		}
+		query.close();	
+		con.close();
+		return simDocs;
+	}
+	
+	public float getAverageJaccardError() throws SQLException {
+		Connection con = getConnection();
+		String query = 
+				"SELECT AVG(err) FROM " + 
+				"(SELECT ABS(actual.jaccardVal-approx.jaccardVal) err " + 
+				"FROM jaccard_values actual " + 
+				"JOIN jaccard_values_minhash approx " + 
+				"ON (actual.d1=approx.d1 AND actual.d2=approx.d2) " + 
+				") a;" ;
+		PreparedStatement stmt = con.prepareStatement(query);
+		stmt.execute();
+		ResultSet rs = stmt.getResultSet();
+		float error = 0;
+		if(rs.next()) 
+			error = rs.getFloat(1);
+		stmt.close();	
+		con.close();
+		return error;
+	}
+	
+	public float getJaccardQuartileError(float quartile) throws SQLException {
+		Connection con = getConnection();
+		String query = 
+				"SELECT percentile_disc(?) WITHIN GROUP(ORDER BY err) FROM " + 
+				"(SELECT ABS(actual.jaccardVal-approx.jaccardVal) err " + 
+				"FROM jaccard_values actual " + 
+				"JOIN jaccard_values_minhash approx " + 
+				"ON (actual.d1=approx.d1 AND actual.d2=approx.d2) " + 
+				") a;" ;
+		PreparedStatement stmt = con.prepareStatement(query);
+		stmt.setFloat(1, quartile);
+		stmt.execute();
+		ResultSet rs = stmt.getResultSet();
+		float error = 0;
+		if(rs.next()) 
+			error = rs.getFloat(1);
+		stmt.close();	
+		con.close();
+		return error;
+	}
+	
+	
 
 }

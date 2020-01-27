@@ -26,8 +26,10 @@ import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.core.io.ClassPathResource;
 import org.w3c.tidy.Tidy;
 
-import com.example.main.backend.HTMLDocument.Language;
+import com.example.main.backend.dao.HTMLDocument;
+import com.example.main.backend.dao.HTMLDocument.Language;
 import com.example.main.backend.utils.LanguageDetector;
+import com.example.main.backend.utils.Stemmer;
 import com.example.main.backend.utils.Utils;
 import com.shekhargulati.urlcleaner.UrlExtractor;
 

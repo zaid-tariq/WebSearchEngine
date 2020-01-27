@@ -1,14 +1,10 @@
-package com.example.main.backend;
+package com.example.main.backend.utils;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-
-import com.example.main.backend.utils.GermanDict;
-import com.example.main.backend.utils.Utils;
-
 import java.util.Set;
 
 import net.sf.extjwnl.JWNLException;
@@ -23,7 +19,7 @@ public final class QueryExpansion {
 	static  Dictionary dict;
 	
 	
-	static List<String> expandQuery(List<String> a_tildaTerms, List<String> a_nonTildaTerms) throws JWNLException {
+	public static List<String> expandQuery(List<String> a_tildaTerms, List<String> a_nonTildaTerms) throws JWNLException {
 		/*
 		 * function to fetch all synonyms from the wordnet and return CNF
 			stem the terms ?

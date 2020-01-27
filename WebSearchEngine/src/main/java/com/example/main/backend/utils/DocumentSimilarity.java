@@ -1,8 +1,6 @@
 package com.example.main.backend.utils;
 
 import java.sql.SQLException;
-import java.util.HashMap;
-
 import org.springframework.stereotype.Service;
 
 import com.example.main.backend.DBHandler;

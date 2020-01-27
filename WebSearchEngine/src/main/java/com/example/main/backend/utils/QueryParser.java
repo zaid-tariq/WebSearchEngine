@@ -1,4 +1,4 @@
-package com.example.main.backend;
+package com.example.main.backend.utils;
 
 import java.net.URL;
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package com.example.main.backend;
+package com.example.main.backend.utils;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

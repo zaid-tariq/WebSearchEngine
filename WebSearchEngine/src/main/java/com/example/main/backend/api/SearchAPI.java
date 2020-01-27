@@ -9,10 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.example.main.backend.DBHandler;
-import com.example.main.backend.QueryParser;
-import com.example.main.backend.SpellChecker;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.dao.Query;
+import com.example.main.backend.utils.QueryParser;
+import com.example.main.backend.utils.SpellChecker;
 
 @Component
 public class SearchAPI {

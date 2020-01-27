@@ -31,9 +31,13 @@ import org.springframework.stereotype.Repository;
 import com.example.main.backend.api.SearchAPI;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.dao.DBResponseDocument;
+import com.example.main.backend.dao.HTMLDocument;
 import com.example.main.backend.dao.Snippet;
 import com.example.main.backend.pagerank.PageRank;
+import com.example.main.backend.utils.QueryExpansion;
+import com.example.main.backend.utils.QueryParser;
 import com.example.main.backend.utils.SnippetGenerator;
+import com.example.main.backend.utils.Stemmer;
 import com.example.main.backend.utils.Utils;
 
 import net.sf.extjwnl.JWNLException;

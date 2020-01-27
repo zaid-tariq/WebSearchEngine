@@ -13,8 +13,8 @@ import java.util.List;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.core.io.ClassPathResource;
 
-import com.example.main.backend.HTMLDocument;
-import com.example.main.backend.HTMLDocument.Language;
+import com.example.main.backend.dao.HTMLDocument;
+import com.example.main.backend.dao.HTMLDocument.Language;
 
 /**
  * Language detector based on the following article proposed on the sheet and

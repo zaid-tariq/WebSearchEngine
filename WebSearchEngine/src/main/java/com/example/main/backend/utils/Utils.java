@@ -10,7 +10,6 @@ import java.util.TreeMap;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.core.io.ClassPathResource;
 
-import com.example.main.backend.Stemmer;
 import com.example.main.backend.dao.Snippet;
 
 public class Utils {

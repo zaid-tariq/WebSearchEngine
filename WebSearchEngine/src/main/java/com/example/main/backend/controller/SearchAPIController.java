@@ -1,6 +1,5 @@
 package com.example.main.backend.controller;
 
-import java.net.URISyntaxException;
 import java.sql.SQLException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,8 +12,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.main.CLIIndexing;
-import com.example.main.CrawlerScheduler;
 import com.example.main.backend.DBHandler;
 import com.example.main.backend.api.SearchAPI;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;

@@ -39,7 +39,7 @@ public class SearchAPIController {
 	@GetMapping("/is-project/json")
 	@ResponseBody
 	public ResponseEntity<SearchResultResponse> searchAPIdisjunctive(@RequestParam(value = "query") String query,
-			@RequestParam(value = "k", defaultValue = "50") int limit, @RequestParam(value = "score") int scoringMethod) {
+			@RequestParam(value = "k", defaultValue = "20") int limit, @RequestParam(value = "score", defaultValue = "3") int scoringMethod) {
 		
 		//TODO: Insert language flag
 		SearchResultResponse res = searchApi.searchAPIdisjunctive(query, limit, new String[] {"english"},scoringMethod, SearchAPI.DOCUMENT_MODE);

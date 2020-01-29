@@ -3,7 +3,7 @@ package com.example.main.backend.api.responseObjects;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MetaSearchResponseObject {
+public class MetaSearchResponseConfigObject {
 
 	public class Pair{
 		String url;

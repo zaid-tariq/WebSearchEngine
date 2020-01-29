@@ -45,8 +45,6 @@
                     <div class="form-group">
                         <input class="form-control" type="text" name="query">
                     </div>
-                    <!-- <input type="hidden" class="inputLanguage" name="lang" value="english">
-                    <input type="hidden" class="scoringMethod" name="scoringMethod" value="3"> -->
                     <input type="submit" class="btn btn-primary" value="Suchen">
                 </form>
             </div>

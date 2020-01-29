@@ -1,6 +1,5 @@
 package com.example.main.backend.controller;
 
-import java.net.URISyntaxException;
 import java.sql.SQLException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,8 +12,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.main.CLIIndexing;
-import com.example.main.CrawlerScheduler;
 import com.example.main.backend.DBHandler;
 import com.example.main.backend.api.SearchAPI;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
@@ -42,7 +39,7 @@ public class SearchAPIController {
 	@GetMapping("/is-project/json")
 	@ResponseBody
 	public ResponseEntity<SearchResultResponse> searchAPIdisjunctive(@RequestParam(value = "query") String query,
-			@RequestParam(value = "k", defaultValue = "50") int limit, @RequestParam(value = "score") int scoringMethod) {
+			@RequestParam(value = "k", defaultValue = "20") int limit, @RequestParam(value = "score", defaultValue = "3") int scoringMethod) {
 		
 		//TODO: Insert language flag
 		SearchResultResponse res = searchApi.searchAPIdisjunctive(query, limit, new String[] {"english"},scoringMethod, SearchAPI.DOCUMENT_MODE);

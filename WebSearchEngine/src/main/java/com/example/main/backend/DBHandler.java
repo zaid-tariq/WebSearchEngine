@@ -946,7 +946,7 @@ public class DBHandler {
 	
 	public Map<Integer, Float> getSimilarDocuments(int docid, float thresh) throws SQLException {
 		Connection con = getConnection();
-		PreparedStatement query = con.prepareStatement("SELECT * FROM get_similar_documents(?,))");
+		PreparedStatement query = con.prepareStatement("SELECT * FROM get_similar_documents(?,?))");
 		query.setInt(1, docid);
 		query.setFloat(2, thresh);
 		query.execute();

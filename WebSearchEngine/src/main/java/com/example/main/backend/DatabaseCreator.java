@@ -57,6 +57,7 @@ public class DatabaseCreator {
 			createGetDocFrequenciesFunction(connection);
 			createGermanDictTable(connection);
 			GermanDict.saveGermanDictToDB(connection);
+			create_metasearch_config_table(connection);
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -714,5 +715,14 @@ public class DatabaseCreator {
 		statement.close();
 	}
 	
+	
+	private void create_metasearch_config_table(Connection con) throws SQLException{
+		
+		String query = 
+				"CREATE TABLE IF NOT EXISTS metasearch_config(engine_url TEXT PRIMARY KEY, enabled boolean)";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
 	
 }

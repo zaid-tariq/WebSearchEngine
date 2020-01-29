@@ -120,4 +120,14 @@ public class Utils {
 		return stemmedWord;
 	}
 	
+	public static String formatQueryStringForGetUrlRequest(String a_query) {
+		
+		String[] query_tokens = a_query.trim().split(" ");
+		String formattedQueryTokens = query_tokens[0].trim();
+		for(int i = 1; i < query_tokens.length; i++) 
+			formattedQueryTokens += "+" + query_tokens[i].trim(); 
+		
+		return formattedQueryTokens;
+	}
+	
 }

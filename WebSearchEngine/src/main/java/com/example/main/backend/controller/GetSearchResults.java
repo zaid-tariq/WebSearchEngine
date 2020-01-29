@@ -32,6 +32,7 @@ public class GetSearchResults {
 	public String images(Model model) {
 		return "images";
 	}
+	
 
 	@RequestMapping("is-project/images-results")
 	public String imagesResults(Model model, @RequestParam(value = "query") String query,

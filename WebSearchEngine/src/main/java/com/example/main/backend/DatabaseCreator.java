@@ -334,7 +334,8 @@ public class DatabaseCreator {
 	
 		String query = 
 				"CREATE INDEX IF NOT EXISTS docid_index ON features (docid);" + 
-				"CREATE INDEX IF NOT EXISTS term_index ON features (term);" ;
+				"CREATE INDEX IF NOT EXISTS term_index ON features (term);"+ 
+				"CREATE INDEX IF NOT EXISTS link_index ON links (from_docid, to_docid);" ;
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();

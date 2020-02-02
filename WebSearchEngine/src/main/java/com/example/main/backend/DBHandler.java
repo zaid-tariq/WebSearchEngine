@@ -264,6 +264,7 @@ public class DBHandler {
 
 	public int getCollectionSize() throws SQLException {
 		Connection con = getConnection();
+		//TODO: Change this to get number of terms in the whole collection. Maybe add a new column in the stats table.
 		PreparedStatement sql = con.prepareStatement("SELECT total_docs from doc_stats_table");
 		sql.execute();
 		ResultSet results = sql.getResultSet();

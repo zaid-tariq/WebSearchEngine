@@ -58,6 +58,10 @@ public class DatabaseCreator {
 			createGermanDictTable(connection);
 			GermanDict.saveGermanDictToDB(connection);
 			create_metasearch_config_table(connection);
+			create_metasearch_cori_table(connection);
+			create_metasearch_collection_stats_table(connection);
+			create_updateCoriStats_function(connection);
+			create_getRelevantSearchEngines_function(connection);
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -721,6 +725,89 @@ public class DatabaseCreator {
 		
 		String query = 
 				"CREATE TABLE IF NOT EXISTS metasearch_config(engine_url TEXT PRIMARY KEY, enabled boolean)";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	private void create_metasearch_cori_table(Connection con) throws SQLException{
+		
+		String query = 
+				"CREATE TABLE IF NOT EXISTS metasearch_cori(engine_url TEXT, term TEXT, T_score real, I_score real, df int, PRIMARY KEY(engine_url, term)";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+	
+	private void create_metasearch_collection_stats_table(Connection con) throws SQLException{
+		
+		String query = 
+				"CREATE TABLE IF NOT EXISTS metasearch_collection_stats(engine_url TEXT PRIMARY KEY, cw int)"; //can also be used to get avg_cw
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+	}
+
+	private void create_getRelevantSearchEngines_function(Connection con) throws SQLException{
+		
+		String query = 
+				"CREATE OR REPLACE FUNCTION getRelevantSearchEngines(search_query text) " + 
+				"RETURNS TABLE(engine_url text, term text, T_score real, I_score real) " + 
+				"LANGUAGE 'plpgsql' " + 
+				"AS " + 
+				"$$ " + 
+				"BEGIN" + 
+				"	CREATE TEMP TABLE IF NOT EXISTS search_terms(term text);" + 
+				"	TRUNCATE search_terms;" + 
+				"	INSERT INTO search_terms (SELECT unnest(regexp_split_to_array(search_query, E'\\\\s+')));" + 
+				"	RETURN QUERY " + 
+				"		WITH enabled_engines AS(" + 
+				"				SELECT * FROM metasearch_config WHERE enabled = true" + 
+				"			)" + 
+				"		SELECT ee2.engine_url, t.term, t.T_score, t.I_score" + 
+				"		FROM enabled_engines ee2 LEFT JOIN(" + 
+				"			SELECT mc.engine_url, mc.term, mc.T_score, mc.I_score" + 
+				"			FROM enabled_engines ee JOIN " + 
+				"			metasearch_cori mc ON (ee.engine_url=mc.engine_url)" + 
+				"			JOIN search_terms st ON (mc.term=st.term)" + 
+				"		) t" + 
+				"		ON (ee2.engine_url=t.engine_url)" + 
+				"		ORDER BY t.engine_url;" + 
+				"		" + 
+				"END $$;";
+		Statement statement = con.createStatement();
+		statement.execute(query);
+		statement.close();
+		
+	}
+	
+	private void create_updateCoriStats_function(Connection con) throws SQLException{
+		
+		String query = 
+				"CREATE OR REPLACE PROCEDURE updateCoriStats() " + 
+				"LANGUAGE 'plpgsql' " + 
+				"AS $$ " + 
+				"DECLARE  " + 
+				"	avg_cw real; " + 
+				"	C int; " + 
+				"BEGIN " + 
+				"		SELECT AVG(cw), COUNT(DISTINCT engine_url)  " + 
+				"		FROM metasearch_collection_stats  " + 
+				"		INTO avg_cw, C; " + 
+				"		 " + 
+				"		UPDATE metasearch_cori " + 
+				"		SET  " + 
+				"			t_score = df / (df+50+(150*cw/avg_cw)), " + 
+				"			i_score = LOG((C+0.5)/cf)/LOG(C+1.0) " + 
+				"		FROM metasearch_cori, ( " + 
+				"			SELECT term, COUNT(DISTINCT engine_url )as cf " + 
+				"			FROM metasearch_cori mc " + 
+				"			WHERE df > 0 " + 
+				"			GROUP BY term " + 
+				"		) term_stats " + 
+				"		WHERE  metasearch_cori.term = term_stats.term; " + 
+				" " + 
+				"END $$;"; 
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();

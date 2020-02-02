@@ -86,10 +86,15 @@
 						<tr>
 							<td>${result.rank}</td>
 							<td><a href="${result.url}">${result.url}</a></td>
-							<td>${result.source}</td>
 							<td>${result.score}</td>
 						</tr>
-						
+						<tr>
+							<td colspan=2>
+								<div class="mb-5" style="display: block; word-wrap: break-word; width: 70vw">
+								<small>Source: <i>${result.source}</i></small> 
+								</div>
+							</td>
+						</tr>
 					</c:forEach>
 				</table>
 			</c:otherwise>

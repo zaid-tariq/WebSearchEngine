@@ -5,6 +5,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
 import com.example.main.backend.api.SearchAPI;
 
 @Controller
@@ -41,5 +42,10 @@ public class GetSearchResults {
 		model.addAttribute("results",
 				api.searchAPIdisjunctive(query, limit, languages.split(" "), 4, SearchAPI.IMAGE_MODE).getResultList());
 		return "images-results";
+	}
+	
+	@RequestMapping("is-project/ads.html")
+	public String ads(Model model) {
+		return "ads";
 	}
 }

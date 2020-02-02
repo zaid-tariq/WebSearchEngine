@@ -5,9 +5,12 @@ import java.sql.SQLException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.main.backend.DBHandler;
 import com.example.main.backend.api.SearchAPI;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
+import com.example.main.backend.dao.AdForm;
 import com.example.main.backend.utils.DocumentSimilarity;
 
 
@@ -26,6 +30,9 @@ public class SearchAPIController {
 	
 	@Autowired
 	private ApplicationContext appContext;
+	
+	@Autowired
+	private DBHandler db;
 	
 	@GetMapping("/is-project/conjunctive")
 	@ResponseBody
@@ -44,6 +51,24 @@ public class SearchAPIController {
 		//TODO: Insert language flag
 		SearchResultResponse res = searchApi.searchAPIdisjunctive(query, limit, new String[] {"english"},scoringMethod, SearchAPI.DOCUMENT_MODE);
 		return ResponseEntity.ok().body(res);
+	}
+	
+	@RequestMapping(value = "/is-project/ad-add", method = RequestMethod.POST)
+	public ResponseEntity<String> addAd(@ModelAttribute("adForm") AdForm form) {
+		//Convert String
+		String ngrams = form.getNgrams().replace("{", "");
+		System.out.println(ngrams);
+		String[] grams = ngrams.split("\\s.,\\s.");
+		
+		System.out.println(form.getPricePerClick());
+		
+		try {
+			boolean success = db.insertAd(form.getUrl(), form.getImageURL(), form.getDescription(), grams, form.getPricePerClick(), form.getTotalBudget());
+			return ResponseEntity.status(HttpStatus.CREATED).build();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
 	}
 	
 	@RequestMapping("*")

@@ -64,21 +64,21 @@ public class DBHandler {
 		query.execute();
 		con.close();
 	}
-	
+
 	public void updateStats() throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("CALL update_doc_stats_table()");
 		query.execute();
 		con.close();
 	}
-	
+
 	public void updateDocFrequencies() throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("CALL update_df_table()");
 		query.execute();
 		con.close();
 	}
-	
+
 	public void updateScores() throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("CALL update_scores(?,?)");
@@ -107,8 +107,8 @@ public class DBHandler {
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		return processSearchQueryResultSet(con, results, searchTerms, searchTerms, k_limit, a_response, 3, searchMode); // closes
-																											// connection
-																											// too
+		// connection
+		// too
 	}
 
 	public SearchResultResponse searchDisjunctiveQuery(String query, int k_limit, String[] languages,
@@ -118,18 +118,20 @@ public class DBHandler {
 		query = query.toLowerCase();
 
 		List<List<String>> searchTerms = QueryParser.getTermsWithoutQuotes(query);
-		List<String> expandedQueryTerms = QueryExpansion.expandQuery(
-				searchTerms.get(QueryParser.TILDA_TERMS), searchTerms.get(QueryParser.NON_TILDA_TERMS));	
-		//if(language == "German") 	
-			//expandedQueryTerms = QueryExpansion.expandGermanQuery(searchTerms.get(QueryParser.TILDA_TERMS), searchTerms.get(QueryParser.NON_TILDA_TERMS), con);
-		
+		List<String> expandedQueryTerms = QueryExpansion.expandQuery(searchTerms.get(QueryParser.TILDA_TERMS),
+				searchTerms.get(QueryParser.NON_TILDA_TERMS));
+		// if(language == "German")
+		// expandedQueryTerms =
+		// QueryExpansion.expandGermanQuery(searchTerms.get(QueryParser.TILDA_TERMS),
+		// searchTerms.get(QueryParser.NON_TILDA_TERMS), con);
+
 		String[] expandedQueryTermsArr = (String[]) expandedQueryTerms.toArray(new String[expandedQueryTerms.size()]);
-		
+
 		List<String> requiredTerms = QueryParser.getTermsInQuotes(query);
 		String[] requiredTermsArr = new String[requiredTerms.size()];
-		for(int i = 0; i < requiredTerms.size(); i++)
+		for (int i = 0; i < requiredTerms.size(); i++)
 			requiredTermsArr[i] = Utils.stemTerm(requiredTerms.get(i));
-		
+
 		PreparedStatement sql = null;
 		if (searchMode == SearchAPI.DOCUMENT_MODE) {
 			sql = con.prepareStatement("SELECT * from get_docs_for_disjunctive_search(?,?,?)");
@@ -146,20 +148,19 @@ public class DBHandler {
 			allOriginalQueryTerms.addAll(requiredTerms);
 			allOriginalQueryTerms.addAll(searchTerms.get(QueryParser.NON_TILDA_TERMS));
 			allOriginalQueryTerms.addAll(searchTerms.get(QueryParser.TILDA_TERMS));
-			return processSearchQueryResultSet(con, results, allOriginalQueryTerms, expandedQueryTerms, k_limit, a_response, scoringMethod,
-					searchMode);
+			return processSearchQueryResultSet(con, results, allOriginalQueryTerms, expandedQueryTerms, k_limit,
+					a_response, scoringMethod, searchMode);
 		}
 		throw new RuntimeException("You don't selected any search Mode");
 	}
 
 	private SearchResultResponse processSearchQueryResultSet(Connection con, ResultSet results,
-			List<String> searchTerms, List<String> expandedQueryTerms, int k_limit, SearchResultResponse a_response, int scoringMethod, int searchMode)
-			throws SQLException {
+			List<String> searchTerms, List<String> expandedQueryTerms, int k_limit, SearchResultResponse a_response,
+			int scoringMethod, int searchMode) throws SQLException {
 
 		HashMap<String, DBResponseDocument> resDocs = new HashMap<String, DBResponseDocument>();
-		
+
 		Map<String, Boolean> queryTermsMap = Utils.splitExpandedQuery(expandedQueryTerms);
-		
 
 		if (searchMode == SearchAPI.DOCUMENT_MODE) {
 			while (results.next()) {
@@ -167,8 +168,8 @@ public class DBHandler {
 				String term = results.getString(2);
 				float score_tfidf = results.getFloat(3);
 				float score_okapi = results.getFloat(4);
-				if(queryTermsMap.containsKey(term) && queryTermsMap.get(term) == false) { //term is not in base query
-					score_tfidf /= 3; //weigh the expansion terms less than query terms by a factor of 3
+				if (queryTermsMap.containsKey(term) && queryTermsMap.get(term) == false) { // term is not in base query
+					score_tfidf /= 3; // weigh the expansion terms less than query terms by a factor of 3
 					score_okapi /= 3;
 				}
 				if (!resDocs.containsKey(url))
@@ -227,7 +228,8 @@ public class DBHandler {
 			}
 		} else if (searchMode == SearchAPI.IMAGE_MODE) {
 			for (DBResponseDocument resDoc : sortedSet) {
-				a_response.addSearchResultItem(rank++, resDoc.url, resDoc.url2, (float) resDoc.getCosSimScore(), new Snippet("No snippet available", -1));
+				a_response.addSearchResultItem(rank++, resDoc.url, resDoc.url2, (float) resDoc.getCosSimScore(),
+						new Snippet("No snippet available", -1));
 				if (rank > k_limit)
 					break;
 			}
@@ -268,7 +270,7 @@ public class DBHandler {
 		sql.execute();
 		ResultSet results = sql.getResultSet();
 		int retVal = 0;
-		if(results.next())
+		if (results.next())
 			retVal = results.getInt(1);
 		results.close();
 		con.close();
@@ -908,8 +910,7 @@ public class DBHandler {
 
 		return new Snippet(markedString, -1, notExists);
 	}
-	
-	
+
 	public void callMakeShinglesFunction(int k) throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("CALL makeShingles(?)");
@@ -918,7 +919,7 @@ public class DBHandler {
 		query.close();
 		con.close();
 	}
-	
+
 	public void callJaccardShinglesFunction() throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("CALL computeJaccardValues()");
@@ -926,7 +927,7 @@ public class DBHandler {
 		query.close();
 		con.close();
 	}
-	
+
 	public void callDoMinhashFunction() throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("CALL do_minhash_table()");
@@ -934,7 +935,7 @@ public class DBHandler {
 		query.close();
 		con.close();
 	}
-	
+
 	public void callJaccardMinhashFunction(int n) throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("CALL calculate_jaccard_minhash(?)");
@@ -943,7 +944,7 @@ public class DBHandler {
 		query.close();
 		con.close();
 	}
-	
+
 	public Map<Integer, Float> getSimilarDocuments(int docid, float thresh) throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement query = con.prepareStatement("SELECT * FROM get_similar_documents(?,?))");
@@ -952,57 +953,64 @@ public class DBHandler {
 		query.execute();
 		ResultSet rs = query.getResultSet();
 		Map<Integer, Float> simDocs = new HashMap<Integer, Float>();
-		while(rs.next()) {
+		while (rs.next()) {
 			int doc = rs.getInt(1);
 			float jaccardSim = rs.getFloat(2);
 			simDocs.put(doc, jaccardSim);
 		}
-		query.close();	
+		query.close();
 		con.close();
 		return simDocs;
 	}
-	
+
 	public float getAverageJaccardError() throws SQLException {
 		Connection con = getConnection();
-		String query = 
-				"SELECT AVG(err) FROM " + 
-				"(SELECT ABS(actual.jaccardVal-approx.jaccardVal) err " + 
-				"FROM jaccard_values actual " + 
-				"JOIN jaccard_values_minhash approx " + 
-				"ON (actual.d1=approx.d1 AND actual.d2=approx.d2) " + 
-				") a;" ;
+		String query = "SELECT AVG(err) FROM " + "(SELECT ABS(actual.jaccardVal-approx.jaccardVal) err "
+				+ "FROM jaccard_values actual " + "JOIN jaccard_values_minhash approx "
+				+ "ON (actual.d1=approx.d1 AND actual.d2=approx.d2) " + ") a;";
 		PreparedStatement stmt = con.prepareStatement(query);
 		stmt.execute();
 		ResultSet rs = stmt.getResultSet();
 		float error = 0;
-		if(rs.next()) 
+		if (rs.next())
 			error = rs.getFloat(1);
-		stmt.close();	
+		stmt.close();
 		con.close();
 		return error;
 	}
-	
+
 	public float getJaccardQuartileError(float quartile) throws SQLException {
 		Connection con = getConnection();
-		String query = 
-				"SELECT percentile_disc(?) WITHIN GROUP(ORDER BY err) FROM " + 
-				"(SELECT ABS(actual.jaccardVal-approx.jaccardVal) err " + 
-				"FROM jaccard_values actual " + 
-				"JOIN jaccard_values_minhash approx " + 
-				"ON (actual.d1=approx.d1 AND actual.d2=approx.d2) " + 
-				") a;" ;
+		String query = "SELECT percentile_disc(?) WITHIN GROUP(ORDER BY err) FROM "
+				+ "(SELECT ABS(actual.jaccardVal-approx.jaccardVal) err " + "FROM jaccard_values actual "
+				+ "JOIN jaccard_values_minhash approx " + "ON (actual.d1=approx.d1 AND actual.d2=approx.d2) " + ") a;";
 		PreparedStatement stmt = con.prepareStatement(query);
 		stmt.setFloat(1, quartile);
 		stmt.execute();
 		ResultSet rs = stmt.getResultSet();
 		float error = 0;
-		if(rs.next()) 
+		if (rs.next())
 			error = rs.getFloat(1);
-		stmt.close();	
+		stmt.close();
 		con.close();
 		return error;
 	}
-	
-	
 
+	public boolean insertAd(String url, String imageURL, String description, String[] ngrams, float pricePerClick, float totalBudget) throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement stmt = con.prepareStatement("INSERT INTO ads(url,imageURL,description,pricePerClick,totalBudget,ngrams) VALUES (?,?,?,?,?,?);");
+		
+		stmt.setString(1,url);
+		stmt.setString(2, imageURL);
+		stmt.setString(3, description);
+		stmt.setDouble(4, pricePerClick);
+		stmt.setDouble(5, totalBudget);
+		stmt.setArray(6, con.createArrayOf("TEXT", ngrams));
+		stmt.execute();
+		
+		stmt.close();
+		con.close();
+		
+		return true;
+	}
 }

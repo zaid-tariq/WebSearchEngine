@@ -2,6 +2,7 @@ package com.example.main.backend.api;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.example.main.backend.DBHandler;
+import com.example.main.backend.api.responseObjects.Ad;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.dao.Query;
 import com.example.main.backend.utils.QueryParser;
@@ -86,5 +88,10 @@ public class SearchAPI {
 		}
 
 		return altQuery;
+	}
+	
+	public List<Ad> getAds() {
+		//TODO: get best ads
+		return new ArrayList<Ad>();
 	}
 }

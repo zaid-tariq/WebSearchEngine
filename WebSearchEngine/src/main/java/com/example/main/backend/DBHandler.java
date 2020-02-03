@@ -996,7 +996,7 @@ public class DBHandler {
 		return error;
 	}
 
-	public boolean insertAd(String url, String imageURL, String description, String[] ngrams, float pricePerClick, float totalBudget) throws SQLException {
+	public boolean insertAd(String url, String imageURL, String description, String[] ngrams, double pricePerClick, double totalBudget) throws SQLException {
 		Connection con = getConnection();
 		PreparedStatement stmt = con.prepareStatement("INSERT INTO ads(url,imageURL,description,pricePerClick,totalBudget,ngrams) VALUES (?,?,?,?,?,?);");
 		
@@ -1012,5 +1012,14 @@ public class DBHandler {
 		con.close();
 		
 		return true;
+	}
+	
+	public void incrementAdClicks(int id) throws SQLException {
+		Connection con = getConnection();
+		PreparedStatement stmt = con.prepareStatement("UPDATE ads SET clickCount = clickCount+1 WHERE id = ?");
+		stmt.setInt(1, id);
+		stmt.execute();
+		stmt.close();
+		con.close();
 	}
 }

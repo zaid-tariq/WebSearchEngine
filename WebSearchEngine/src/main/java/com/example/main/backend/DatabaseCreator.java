@@ -503,7 +503,7 @@ public class DatabaseCreator {
 
 	private void createAdTable(Connection con) throws SQLException {
 		String query ="CREATE TABLE IF NOT EXISTS ads(id SERIAL PRIMARY KEY, url TEXT NOT NULL, description TEXT NOT NULL,"
-				+ " pricePerClick FLOAT NOT NULL, totalBudget FLOAT NOT NULL, ngrams TEXT[], imageURL TEXT NOT NULL);";
+				+ " pricePerClick DOUBLE PRECISION NOT NULL, totalBudget DOUBLE PRECISION NOT NULL, ngrams TEXT[], imageURL TEXT NOT NULL, clickCount INT NOT NULL DEFAULT 0);";
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();

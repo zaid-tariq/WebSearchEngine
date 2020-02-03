@@ -3,8 +3,8 @@ package com.example.main.backend.dao;
 public class AdForm {
 	private String url;
 	private String imageURL;
-	private float pricePerClick;
-	private float totalBudget;
+	private double pricePerClick;
+	private double totalBudget;
 	private String ngrams;
 	private String description;
 	
@@ -20,16 +20,16 @@ public class AdForm {
 	public void setImageURL(String imageURL) {
 		this.imageURL = imageURL;
 	}
-	public float getPricePerClick() {
+	public double getPricePerClick() {
 		return pricePerClick;
 	}
-	public void setPricePerClick(float pricePerClick) {
+	public void setPricePerClick(double pricePerClick) {
 		this.pricePerClick = pricePerClick;
 	}
-	public float getTotalBudget() {
+	public double getTotalBudget() {
 		return totalBudget;
 	}
-	public void setTotalBudget(float totalBudget) {
+	public void setTotalBudget(double totalBudget) {
 		this.totalBudget = totalBudget;
 	}
 	public String getNgrams() {

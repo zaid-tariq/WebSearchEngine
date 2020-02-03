@@ -120,5 +120,6 @@
 	<script src="../js/results.js"></script>
 	<script src="../js/languageDropdown.js"></script>
 	<script src="../js/scoringDropdown.js"></script>
+	<script src="../js/ads.js"></script>
 </body>
 </html>

@@ -25,6 +25,7 @@ public class GetSearchResults {
 			@RequestParam(value = "lang") String languages, @RequestParam(value = "scoringMethod") int scoringMethod) {
 		model.addAttribute("results", api.searchAPIdisjunctive(query, limit, languages.split(" "), scoringMethod,
 				SearchAPI.DOCUMENT_MODE).resultList);
+		model.addAttribute("ads", api.)
 		model.addAttribute("didYouMean", api.getDidYouMeanQuery(query));
 		return "results";
 	}

@@ -5,6 +5,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+
 import com.example.main.backend.api.SearchAPI;
 
 @Controller
@@ -24,6 +25,8 @@ public class GetSearchResults {
 			@RequestParam(value = "lang") String languages, @RequestParam(value = "scoringMethod") int scoringMethod) {
 		model.addAttribute("results", api.searchAPIdisjunctive(query, limit, languages.split(" "), scoringMethod,
 				SearchAPI.DOCUMENT_MODE).resultList);
+		//TODO: replace by right parameters
+		model.addAttribute("ads", api.getAds(query, 4));
 		model.addAttribute("didYouMean", api.getDidYouMeanQuery(query));
 		return "results";
 	}
@@ -41,5 +44,10 @@ public class GetSearchResults {
 		model.addAttribute("results",
 				api.searchAPIdisjunctive(query, limit, languages.split(" "), 4, SearchAPI.IMAGE_MODE).getResultList());
 		return "images-results";
+	}
+	
+	@RequestMapping("is-project/ads.html")
+	public String ads(Model model) {
+		return "ads";
 	}
 }

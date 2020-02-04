@@ -516,7 +516,7 @@ public class DatabaseCreator {
 	private void create_metasearch_cori_table(Connection con) throws SQLException{
 		
 		String query = 
-				"CREATE TABLE IF NOT EXISTS metasearch_cori(engine_url TEXT, term TEXT, T_score real, I_score real, df int, PRIMARY KEY(engine_url, term)";
+				"CREATE TABLE IF NOT EXISTS metasearch_cori(engine_url TEXT, term TEXT, T_score real, I_score real, df int, PRIMARY KEY(engine_url, term))";
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();

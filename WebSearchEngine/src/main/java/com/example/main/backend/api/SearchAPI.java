@@ -3,8 +3,13 @@ package com.example.main.backend.api;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import javax.sound.midi.Soundbank;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -90,8 +95,40 @@ public class SearchAPI {
 		return altQuery;
 	}
 	
-	public List<Ad> getAds() {
-		//TODO: get best ads
-		return new ArrayList<Ad>();
+	public List<Ad> getAds(String query, int limit) {
+		List<Ad> ads;
+		try {
+			ads = db.getAllAds();
+			Set<String> terms = new HashSet<String>();
+			for(String s : QueryParser.getTermsInQuotes(query)){
+				terms.add(s.toLowerCase());
+			}
+			
+			for(String s : QueryParser.getTermsWithoutQuotes_2(query)) {
+				terms.add(s.toLowerCase());
+			}
+			
+			//Calculate scores
+			for(Ad ad : ads) {
+				double score = 0.0;
+				for(String ngram : ad.getNgrams()) {
+					String[] w = ngram.split("\\s+");
+					int containedWords = 0;
+					for(String word : w) {
+						if(terms.contains(word.toLowerCase())){
+							containedWords++;
+						}
+					}
+					score += w.length * containedWords;
+				}
+				ad.setScore(score);
+			}
+			
+			ads.sort(Comparator.comparingDouble(Ad::getScore).reversed());
+			return ads.subList(0, Math.min(4,ads.size()));
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return new ArrayList<Ad>();
+		}
 	}
 }

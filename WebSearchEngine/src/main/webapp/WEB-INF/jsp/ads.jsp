@@ -40,7 +40,7 @@
 	    	</div>
 	    	<div class="form-row mb-3">
 	    		<div class="col">
-	    			<label for="ngrams">N-grams ({[database,course],[informatik,kaiserslautern]})</label>
+	    			<label for="ngrams">N-grams ({[database course],[informatik kaiserslautern]})</label>
 	    			<textarea class="form-control" rows="2" name="ngrams" id="ngrams" required></textarea>
 	    		</div>
 	    	</div>

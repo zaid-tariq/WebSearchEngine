@@ -1,6 +1,7 @@
 ## Web Search Engine
 
 ####Readme change log:
+04.02.2020 Added ad placement section  
 17.12.2019 Added going live section
 
 ## Build instructions
@@ -91,5 +92,11 @@ The TUgle IMAGES web interface is accesible at:
 [http://isproj-vm01.informatik.uni-kl.de:8080/is-project/images.html](http://isproj-vm01.informatik.uni-kl.de:8080/is-project/images.html)
 
 
+## Ad Placement on TUgle
+Go to the following page:  
+[http://is-proj-vm01.informatik.uni-kl.de:8080/is-project/ads.html](http://is-proj-vm01.informatik.uni-kl.de:8080/is-project/ads.html)
 
+There you can place ads by filling in the form and submitting it.  
+You can place free ads under the following link:  
+[http://is-proj-vm01.informatik.uni-kl.de:8080/is-project/free-ads](https://youtu.be/dQw4w9WgXcQ)
 

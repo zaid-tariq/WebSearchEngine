@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,6 +30,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import com.example.main.backend.api.SearchAPI;
+import com.example.main.backend.api.responseObjects.Ad;
 import com.example.main.backend.api.responseObjects.SearchResultResponse;
 import com.example.main.backend.dao.DBResponseDocument;
 import com.example.main.backend.dao.HTMLDocument;
@@ -1014,12 +1016,24 @@ public class DBHandler {
 		return true;
 	}
 	
+	public List<Ad> getAllAds() throws SQLException{
+		Connection con = getConnection();
+		Statement stmt = con.createStatement();
+		ResultSet r = stmt.executeQuery("SELECT * FROM ads WHERE (totalBudget - pricePerClick) >= 0.00");
+		List<Ad> ads = new ArrayList<Ad>();
+		while(r.next()) {
+			ads.add(new Ad(r.getInt(1), r.getString(3), r.getString(7), 0, r.getString(2), (String[]) r.getArray(6).getArray()));
+		}
+		return ads;
+	}
+	
 	public void incrementAdClicks(int id) throws SQLException {
 		Connection con = getConnection();
-		PreparedStatement stmt = con.prepareStatement("UPDATE ads SET clickCount = clickCount+1 WHERE id = ?");
+		PreparedStatement stmt = con.prepareStatement("UPDATE ads SET clickCount = clickCount+1, totalBudget = totalBudget - pricePerClick  WHERE id = ?");
 		stmt.setInt(1, id);
 		stmt.execute();
 		stmt.close();
 		con.close();
 	}
+	
 }

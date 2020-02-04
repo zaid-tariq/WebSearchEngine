@@ -85,24 +85,38 @@
 			</c:when>
 			<c:otherwise>
 				<table class="table table-borderless table-sm">
-					<c:forEach items="${results}" var="result">
+					<tbody>
+					<c:set var="adsPlaced" value="${0}"/>
+					<c:forEach items="${results}" var="result" varStatus="loop">
+						<c:if test="${fn:length(ads) > 0 && Math.floor(loop.index % (fn:length(results)/fn:length(ads))) == 0 && adsPlaced < 4}">
+							<tr>
+								<td colspan="3"><a class="adclick" adId="${ads.get(adsPlaced).getId()}" href="${ads.get(adsPlaced).getUrl()}">${ads.get(adsPlaced).getUrl()}</a><br><span style="color: grey">Advertisement</span></td>
+							</tr>
+							<tr>
+								<td colspan="3" style="width: 1px;white-space: nowrap"><div class="mt-2"><a class="adclick" adId="${ads.get(adsPlaced).getId()}" href="${ads.get(adsPlaced).getUrl()}"><img src="${ads.get(adsPlaced).getImageURL()}"></a></div></td>
+							</tr>
+							<tr>
+								<td colspan="3"><div class="mb-5 mt-2">${ads.get(adsPlaced).getText()}</div></td>
+							</tr>
+							<c:set var="adsPlaced" value="${adsPlaced+1}"/>
+						</c:if>
 						<tr>
-							<td>${result.rank}</td>
-							<td><a href="${result.url}">${result.url}</a></td>
-							<td>${result.score}</td>
+							<td colspan="2">${result.rank}&nbsp;&nbsp;&nbsp;<a href="${result.url}">${result.url}</a></td>
+							<td colspan="1" class="text-right">${result.score}</td>
 						</tr>
 						<tr>
-							<td colspan=3><span style="color: grey"><c:if
+							<td colspan="3"><span style="color: grey"><c:if
 										test="${result.snippet.getNotOccurringTerms().size()>0}">Missing:</c:if>
 									<c:forEach var="term"
 										items="${result.snippet.getNotOccurringTerms()}">${term} </c:forEach></span>
 							</td>
 						</tr>
 						<tr>
-							<td colspan=2><div class="mb-5"
-									style="display: block; word-wrap: break-word; width: 70vw">${result.snippet.text}</div></td>
+							<td colspan="3"><div class="mb-5"
+									style="display: block; word-wrap: break-word">${result.snippet.text}</div></td>
 						</tr>
 					</c:forEach>
+					</tbody>
 				</table>
 			</c:otherwise>
 		</c:choose>

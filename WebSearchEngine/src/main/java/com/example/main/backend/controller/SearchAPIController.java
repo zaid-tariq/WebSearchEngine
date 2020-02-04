@@ -61,8 +61,8 @@ public class SearchAPIController {
 	@RequestMapping(value = "/is-project/ad-add", method = RequestMethod.POST)
 	public void addAd(@ModelAttribute("adForm") AdForm form, HttpServletResponse response) throws IOException {
 		// Convert String
-		String ngrams = form.getNgrams().replace("{", "");
-		String[] grams = ngrams.split("\\s.,\\s.");
+		String ngrams = form.getNgrams().replace("{", "").replace("}", "");
+		String[] grams = ngrams.replace("[","").replace("]","").split("\\s.,\\s.");
 
 		try {
 			db.insertAd(form.getUrl(), form.getImageURL(), form.getDescription(), grams, form.getPricePerClick(),

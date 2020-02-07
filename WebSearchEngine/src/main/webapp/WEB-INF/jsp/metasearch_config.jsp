@@ -9,23 +9,30 @@
 	crossorigin="anonymous">
 <link rel="stylesheet" href="../css/style.css">
 </head>
-<body class="position-relative">
+<body>
+	<div style="top:1em;float: right;right:1em;position: absolute;">
+		<div class="btn-group">
+			<a href="/is-project/metasearch/" type="button" class="btn btn-primary btn-sm">
+			   	Metasearch Page
+			</a>
+		</div>
+	</div>
 	
-	<div class="container">
+	<div class="container" style="margin-top: 10%;">
 		<div>
-			<h3>Add New Search Engine:</h3>
-			<form action="config" method="get">
-				<input placeholder="Enter URL" type="text" name="url" value="${engine.url}">
+			<b>Add New Search Engine:</b>
+			<form action="config" method="get" class="row">
+				<input class="form-control col-sm-6" placeholder="Enter URL" type="text" name="url" value="${engine.url}">
 				<input style="display: none" type="text" name="action" value="add">
-				<input class="btn btn-link" type="submit" value="Save"> 
+				<input class="btn-sm btn-primary" type="submit" value="Save"> 
 			</form>
 		</div>
 		<c:choose>
 			<c:when test="${fn:length(results.urls)==0}">
-				<h3 class="text-center">There are currently no search engines in the DB</h3>
+				<b class="text-center">There are currently no search engines in the DB</b>
 			</c:when>
 			<c:otherwise>
-				<h3>Saved Search Engines:</h3>
+				<b>Saved Search Engines:</b>
 				<table class="table table-borderless table-sm">
 					<c:forEach items="${results.urls}" var="engine">
 						<tr>

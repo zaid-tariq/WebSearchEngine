@@ -269,7 +269,7 @@ public class DatabaseCreator {
 	private void createDocumnetStatsTable(Connection con) throws SQLException {
 
 		PreparedStatement statement = con
-				.prepareStatement("CREATE TABLE IF NOT EXISTS doc_stats_table (total_docs INT, avg_num_of_terms INT)");
+				.prepareStatement("CREATE TABLE IF NOT EXISTS doc_stats_table (total_docs INT, avg_num_of_terms INT, cw INT)");
 		statement.execute();
 		statement.close();
 	}
@@ -334,15 +334,28 @@ public class DatabaseCreator {
 	}
 
 	private void createUpdateDocStatsFunction(Connection con) throws SQLException {
-		String query = "CREATE OR REPLACE PROCEDURE update_doc_stats_table()   " + "    LANGUAGE 'plpgsql'   "
-				+ "    AS $$   " + "    BEGIN   " + "    TRUNCATE TABLE doc_stats_table;" + "    WITH   "
-				+ "      docs_stats AS( " + "          SELECT COUNT(docid) num_docs, AVG(num_of_terms) avg_num_terms  "
-				+ "          FROM documents  " + "      )"
-				+ "    INSERT INTO doc_stats_table (SELECT * FROM docs_stats);" + "    END; $$;";
+		String query = 
+				"CREATE OR REPLACE PROCEDURE update_doc_stats_table()   " 
+				+ "    LANGUAGE 'plpgsql'   "
+				+ "    AS $$   " 
+				+ "    BEGIN   " 
+				+ "    TRUNCATE TABLE doc_stats_table;" 
+				+ "    WITH   "
+				+ "      docs_stats AS( " 
+				+ "          SELECT COUNT(docid) num_docs, AVG(num_of_terms) avg_num_terms  "
+				+ "          FROM documents  " 
+				+ "      ),"
+				+ "      collection_stats AS( " 
+				+ "          SELECT COUNT(DISTINCT term) cw "
+				+ "          FROM features  " 
+				+ "      )"
+				+ "    INSERT INTO doc_stats_table (SELECT * FROM docs_stats,collection_stats);" 
+				+ "    END; $$;";
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();
 	}
+	
 
 	private void create_get_similar_documents_function(Connection con) throws SQLException {
 

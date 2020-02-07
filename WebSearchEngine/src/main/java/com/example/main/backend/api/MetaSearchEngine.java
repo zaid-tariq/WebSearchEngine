@@ -180,6 +180,12 @@ public class MetaSearchEngine {
 		}
 		stmt.close();	
 		closeConnection(con);
+		
+		for(MetaSearchEngineStats engine:engines)
+			engine.computeCoriScore();
+		
+		Collections.sort(engines, (e1, e2) -> -Double.compare(e1.getCori(), e2.getCori()));
+		
 		return engines;
 	}
 	

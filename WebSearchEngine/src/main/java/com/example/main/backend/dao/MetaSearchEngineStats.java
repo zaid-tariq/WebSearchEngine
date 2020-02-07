@@ -10,6 +10,7 @@ public class MetaSearchEngineStats {
 
 	String url;
 	int cw;
+	Double cori = 0.0;
 	List<TermStats> terms = new ArrayList<TermStats>();
 	List<TermStats> unknown_terms = new ArrayList<TermStats>();
 	Future<MetaSearchResultResponse> queryResult;
@@ -22,6 +23,22 @@ public class MetaSearchEngineStats {
 		terms.add(termS);
 	}
 	
+	public Double getCori() {
+		return cori;
+	}
+
+	public void setCori(Double cori) {
+		this.cori = cori;
+	}
+
+	public List<TermStats> getUnknown_terms() {
+		return unknown_terms;
+	}
+
+	public void setUnknown_terms(List<TermStats> unknown_terms) {
+		this.unknown_terms = unknown_terms;
+	}
+
 	public void upateTermStat(String a_term, int df) {
 		for(TermStats term: terms)
 			if(term.getTerm() != null && term.getTerm().equals(a_term)) {
@@ -30,16 +47,27 @@ public class MetaSearchEngineStats {
 			}
 		unknown_terms.add(new TermStats(a_term, df));
 	}
+	
+	public void computeCoriScore() {
+		double b = 0.4;
+		Double cori = 0.0;
+		for(TermStats termStat:terms) {
+			if(termStat.term == null)
+				continue;
+			cori += (b + (1-b) * termStat.getI_score() * termStat.getT_score());
+		}
+		this.cori = cori;
+	}
 
 	public Double compute_r_dash_score() {
 		double b = 0.4;
 		double r_min = 0.0;
 		double r_max = 0.0;
-		double r_i = 0.0;
+		double r_i = this.cori;
 		for(TermStats termStat:terms) {
 			if(termStat.term == null)
 				continue;
-			r_i += (b + (1-b) * termStat.getI_score() * termStat.getT_score());
+			//r_i += (b + (1-b) * termStat.getI_score() * termStat.getT_score());
 			r_min += (b + (1-b) * termStat.getI_score()); //set T = 1
 			r_max += b; //set T = 0
 		}

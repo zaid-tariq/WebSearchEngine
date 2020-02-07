@@ -11,41 +11,26 @@
 </head>
 <body class="h-100">
 <div class="container-fluid h-100 position-relative">
-	<!-- <div class="position-absolute" style="top:1em;right:1em">
+	<div class="position-absolute" style="top:1em;right:1em">
 		<div class="btn-group">
-			<button type="button" class="btn btn-primary btn-sm dropdown-toggle scoring-method" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-			   	Combined Score
-			</button>
-			<div class="dropdown-menu dropdown-menu-scoring-method dropdown-menu-right">
-			    <a class="dropdown-item" href="#" value="1">TF*IDF</a>
-	  			<a class="dropdown-item" href="#" value="2">BM25</a>
-	  			<a class="dropdown-item active" href="#" value="3">Combined Score</a>
-			</div>
+			<a href="/is-project/metasearch/config" type="button" class="btn btn-primary btn-sm">
+			   	Config
+			</a>
 		</div>
-		<div class="btn-group">
-		  	<button type="button" class="btn btn-primary btn-sm dropdown-toggle language" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-		    	English
-		  	</button>
-		  	<div class="dropdown-menu dropdown-menu-language dropdown-menu-right">
-		    	<a class="dropdown-item active" href="#">English</a>
-  				<a class="dropdown-item" href="#">German</a>
-  				<a class="dropdown-item" href="#">No matter</a>
-		  	</div>
-		</div>
-	</div> -->
+	</div>
     <div class="row justify-content-center align-items-center h-75">
         <div class="card col-5" style="background-color:transparent;border:none">
             <div class="card-body text-center">
             	<div class="row mb-4">
             		<a href="/is-project/index.html" class="col-6 offset-3">
-            			<img style="width:inherit;height:auto" src="../images/TUgle.png" alt="TUgle">
+            			<img style="width:inherit;height:auto" src="/images/TUgle.png" alt="TUgle">
             		</a>
             	</div>                
             	<form action="results" method="get">
                     <div class="form-group">
                         <input class="form-control" type="text" name="query">
                     </div>
-                    <input type="submit" class="btn btn-primary" value="Suchen">
+                    <input type="submit" class="btn btn-primary" value="Metasearch">
                 </form>
             </div>
         </div>

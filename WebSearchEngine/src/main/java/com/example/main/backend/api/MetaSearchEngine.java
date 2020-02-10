@@ -191,8 +191,15 @@ public class MetaSearchEngine {
 	
 	public MetaSearchResultResponse querySearchEngineAPI(String a_engineUrl, String a_query, int k) {
 
-		a_engineUrl += "?query="+Utils.formatQueryStringForGetUrlRequest(a_query)+"&k="+k;
-		return this.restTemplate.getForObject(a_engineUrl, MetaSearchResultResponse.class);
+		MetaSearchResultResponse dataObject = null;
+		try{
+			a_engineUrl += "?query="+Utils.formatQueryStringForGetUrlRequest(a_query)+"&k="+k;
+			dataObject = this.restTemplate.getForObject(a_engineUrl, MetaSearchResultResponse.class);			
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
+		return dataObject;
 	}
 	
 	double computeNormalizedDocScore(Double R_dash, Double D) {
@@ -229,7 +236,7 @@ public class MetaSearchEngine {
 					//-> add the query terms to the not-collected-selected engine and set their df to 0 so that the interval function will read them and get the stats from the search engine when it runs
 					//-> in the interval function, maybe, also randomly select some engine to update their existing stats. Maybe.
 				}
-			} catch (InterruptedException | ExecutionException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			} 
 		}

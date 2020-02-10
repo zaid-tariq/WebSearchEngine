@@ -312,11 +312,10 @@ public class MetaSearchEngine {
 	}
 	
 
-	public MetaSearchResultResponse getSearchResults(String query) throws SQLException{
+	public MetaSearchResultResponse getSearchResults(String query, int cutoff) throws SQLException{
 
 		List<MetaSearchEngineStats> engines = getRelevantSearchEnginesFromDB(query);
-		int n = 10; //send the query only to the top 10 relevant engines
-		for(int i = 0; i < n && i < engines.size(); i++){
+		for(int i = 0; i < cutoff && i < engines.size(); i++){
 			MetaSearchEngineStats engine = engines.get(i);
 			Future<MetaSearchResultResponse> queryResult = exs.submit(()->{
 				return querySearchEngineAPI(engine.getUrl(), query, 20); //Maybe calculate K based on engine's cori score?

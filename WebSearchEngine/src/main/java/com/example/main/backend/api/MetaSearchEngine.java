@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.concurrent.Future;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.main.backend.DBHandler;
@@ -25,6 +27,7 @@ import com.example.main.backend.api.responseObjects.StatItem;
 import com.example.main.backend.dao.MetaSearchEngineStats;
 import com.example.main.backend.dao.MetaSearchEngineStats.TermStats;
 import com.example.main.backend.utils.Utils;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 
 @Service
 public class MetaSearchEngine {
@@ -38,7 +41,7 @@ public class MetaSearchEngine {
 	@Autowired
 	public MetaSearchEngine(RestTemplateBuilder builder) {
 		
-		this.restTemplate = builder.build();
+		this.restTemplate = builder.setConnectTimeout(Duration.ofSeconds(5)).setReadTimeout(Duration.ofSeconds(5)).build();
 		exs = Executors.newCachedThreadPool();
 	}
 	
@@ -191,8 +194,16 @@ public class MetaSearchEngine {
 	
 	public MetaSearchResultResponse querySearchEngineAPI(String a_engineUrl, String a_query, int k) {
 
-		a_engineUrl += "?query="+Utils.formatQueryStringForGetUrlRequest(a_query)+"&k="+k;
-		return this.restTemplate.getForObject(a_engineUrl, MetaSearchResultResponse.class);
+		MetaSearchResultResponse dataObject = null;
+		try{
+			a_engineUrl += "?query="+Utils.formatQueryStringForGetUrlRequest(a_query)+"&k="+k;
+			dataObject = this.restTemplate.getForObject(a_engineUrl, MetaSearchResultResponse.class);
+		}
+		catch(RestClientException ex) {
+			//ex.printStackTrace();
+			System.out.println("Remote engine returned error. ");
+		}
+		return dataObject;
 	}
 	
 	double computeNormalizedDocScore(Double R_dash, Double D) {
@@ -208,20 +219,22 @@ public class MetaSearchEngine {
 			
 			try {
 				if(engine.getQueryResult() != null) {
-					MetaSearchResultResponse searchResultsObj = engine.getQueryResult().get();
-					Double r_dash_score = engine.compute_r_dash_score();
-					for(MetaSearchResultItem searchResult:searchResultsObj.getResultList()){
-						double normalized_score = computeNormalizedDocScore(r_dash_score, (double) searchResult.getScore());
-						searchResult.setScore((float) normalized_score);
-						searchResult.setSource(engine.getUrl());
-						combinedRes.resultList.add(searchResult);
-					}
-					//updating stats 
-					engine.setCw(searchResultsObj.getCw());
-					for(StatItem queryStat : searchResultsObj.getStat()) {
-						int df = queryStat.getDf();
-						String term = queryStat.getTerm();
-						engine.upateTermStat(term, df);
+					if(engine.getQueryResult().get() != null) {
+						MetaSearchResultResponse searchResultsObj = engine.getQueryResult().get();
+						Double r_dash_score = engine.compute_r_dash_score();
+						for(MetaSearchResultItem searchResult:searchResultsObj.getResultList()){
+							double normalized_score = computeNormalizedDocScore(r_dash_score, (double) searchResult.getScore());
+							searchResult.setScore((float) normalized_score);
+							searchResult.setSource(engine.getUrl());
+							combinedRes.resultList.add(searchResult);
+						}
+						//updating stats 
+						engine.setCw(searchResultsObj.getCw());
+						for(StatItem queryStat : searchResultsObj.getStat()) {
+							int df = queryStat.getDf();
+							String term = queryStat.getTerm();
+							engine.upateTermStat(term, df);
+						}
 					}
 				}
 				else {
@@ -229,7 +242,7 @@ public class MetaSearchEngine {
 					//-> add the query terms to the not-collected-selected engine and set their df to 0 so that the interval function will read them and get the stats from the search engine when it runs
 					//-> in the interval function, maybe, also randomly select some engine to update their existing stats. Maybe.
 				}
-			} catch (InterruptedException | ExecutionException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			} 
 		}
@@ -299,11 +312,10 @@ public class MetaSearchEngine {
 	}
 	
 
-	public MetaSearchResultResponse getSearchResults(String query) throws SQLException{
+	public MetaSearchResultResponse getSearchResults(String query, int cutoff) throws SQLException{
 
 		List<MetaSearchEngineStats> engines = getRelevantSearchEnginesFromDB(query);
-		int n = 10; //send the query only to the top 10 relevant engines
-		for(int i = 0; i < n && i < engines.size(); i++){
+		for(int i = 0; i < cutoff && i < engines.size(); i++){
 			MetaSearchEngineStats engine = engines.get(i);
 			Future<MetaSearchResultResponse> queryResult = exs.submit(()->{
 				return querySearchEngineAPI(engine.getUrl(), query, 20); //Maybe calculate K based on engine's cori score?

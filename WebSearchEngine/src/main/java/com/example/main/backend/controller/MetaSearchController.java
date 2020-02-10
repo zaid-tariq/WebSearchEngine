@@ -30,9 +30,12 @@ public class MetaSearchController {
 	}
 	
 	@RequestMapping("is-project/metasearch/results")
-	public String metaSearchConfigAction(Model model, @RequestParam(value = "query") String query) throws SQLException {
-		
-		model.addAttribute("response", metaSearchApi.getSearchResults(query));
+	public String metaSearchConfigAction(Model model, @RequestParam(value = "query") String query,
+			@RequestParam(value = "cutoff", defaultValue = "10") int cutoff) throws SQLException {
+
+		if(cutoff <= 0)
+			cutoff = 1;
+		model.addAttribute("response", metaSearchApi.getSearchResults(query, cutoff));
 		return "metasearch_results";
 	}
 	

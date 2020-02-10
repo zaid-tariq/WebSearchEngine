@@ -47,7 +47,6 @@
 				<table class="table table-borderless table-sm">
 					<c:forEach items="${response.resultList}" var="result">
 						<tr>
-							<td>${result.rank}</td>
 							<td><a href="${result.url}">${result.url}</a></td>
 							<td>${result.score}</td>
 						</tr>

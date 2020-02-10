@@ -574,7 +574,6 @@ public class DatabaseCreator {
 		Statement statement = con.createStatement();
 		statement.execute(query);
 		statement.close();
-		
 	}
 	
 	private void create_updateCoriStats_function(Connection con) throws SQLException{
@@ -595,14 +594,14 @@ public class DatabaseCreator {
 				"		SET  " + 
 				"			t_score = df / (df+50+(150*cw/avg_cw)), " + 
 				"			i_score = LOG((C+0.5)/cf)/LOG(C+1.0) " + 
-				"		FROM metasearch_cori, ( " + 
+				"		FROM ( " + 
 				"			SELECT term, COUNT(DISTINCT engine_url )as cf " + 
 				"			FROM metasearch_cori mc " + 
 				"			WHERE df > 0 " + 
 				"			GROUP BY term " + 
-				"		) term_stats " + 
-				"		WHERE  metasearch_cori.term = term_stats.term; " + 
-				" " + 
+				"		) term_stats,  metasearch_collection_stats" + 
+				"		WHERE  metasearch_cori.term = term_stats.term " + 
+				" 		AND metasearch_collection_stats.engine_url=metasearch_cori.engine_url; " + 
 				"END $$;"; 
 		Statement statement = con.createStatement();
 		statement.execute(query);

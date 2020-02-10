@@ -91,6 +91,11 @@ Replace the argument placeholder #1,#2, and #3 by:
 The TUgle IMAGES web interface is accesible at:
 [http://isproj-vm01.informatik.uni-kl.de:8080/is-project/images.html](http://isproj-vm01.informatik.uni-kl.de:8080/is-project/images.html)
 
+## Metasearch Engine
+Go to the following page:  
+http://isproj-vm01.informatik.uni-kl.de:8080/is-project/metasearch/
+Add "cutoff" paramter in query string to adjust cutoff limit for chosen search engines. Default is 10.
+e.g: http://isproj-vm01.informatik.uni-kl.de:8080/is-project/metasearch/results?query=beautiful&cutoff=1
 
 ## Ad Placement on TUgle
 Go to the following page:  

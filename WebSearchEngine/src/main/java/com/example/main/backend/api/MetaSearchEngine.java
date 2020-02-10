@@ -201,7 +201,7 @@ public class MetaSearchEngine {
 		}
 		catch(RestClientException ex) {
 			//ex.printStackTrace();
-			System.out.println("Remote engine returned error. "+ex.getMessage());
+			System.out.println("Remote engine returned error. ");
 		}
 		return dataObject;
 	}

@@ -599,9 +599,9 @@ public class DatabaseCreator {
 				"			FROM metasearch_cori mc " + 
 				"			WHERE df > 0 " + 
 				"			GROUP BY term " + 
-				"		) term_stats " + 
-				"		WHERE  metasearch_cori.term = term_stats.term; " + 
-				" " + 
+				"		) term_stats,  metasearch_collection_stats" + 
+				"		WHERE  metasearch_cori.term = term_stats.term " + 
+				" 		AND metasearch_collection_stats.engine_url=metasearch_cori.engine_url; " + 
 				"END $$;"; 
 		Statement statement = con.createStatement();
 		statement.execute(query);
